@@ -6,5 +6,6 @@ import react from '@vitejs/plugin-react';
 //   set VITE_BASE=/MyRepoName/ && npm run build
 export default defineConfig({
   plugins: [react()],
-  base: process.env.VITE_BASE || '/',
+  base: './',
 });
+
