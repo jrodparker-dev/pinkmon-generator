@@ -30,8 +30,9 @@ function isRegionalId(id: string): boolean {
   return id.includes('alola') || id.includes('galar') || id.includes('hisui') || id.includes('paldea');
 }
 
-function isMegaId(id: string): boolean {
-  return id.includes('mega');
+function isMegaForm(p: Pokemon): boolean {
+  const name = p.name.toLowerCase();
+  return name.includes('-mega') || name.startsWith('mega ');
 }
 
 function isGmaxId(id: string): boolean {
@@ -107,7 +108,7 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
   // include/exclude toggles for the supported form categories.
   pool = pool.filter((p) => {
     if (isGmaxId(p.id) && !options.includeGmax) return false;
-    if (isMegaId(p.id) && !options.includeMega) return false;
+    if (isMegaForm(p) && !options.includeMega) return false;
     if (isRegionalId(p.id) && !options.includeRegional) return false;
     return true;
   });

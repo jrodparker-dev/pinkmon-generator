@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
 import type { Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
@@ -90,6 +90,10 @@ function DropdownMulti({
 function SpriteImg({ p, shiny, className }: { p: any; shiny: boolean; className?: string }) {
   const urls = useMemo(() => spriteFallbacks(p, shiny), [p, shiny]);
   const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [p, shiny]);
 
   return (
     <img
