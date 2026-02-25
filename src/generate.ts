@@ -2,6 +2,7 @@ import type { Generated, Options, Pokemon } from './types';
 import {
   attackerMatches,
   genFromNum,
+  isLegendaryOrSublegendary,
   legendCatsMatch,
   mashName,
   statsMatch,
@@ -117,6 +118,10 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
 
   if (options.genFilter.length) {
     pool = pool.filter((p) => isAllowedByGens(p, options.genFilter));
+  }
+
+  if (options.noLegendaries) {
+    pool = pool.filter((p) => !isLegendaryOrSublegendary(p));
   }
 
   if (options.legendCats.length) {

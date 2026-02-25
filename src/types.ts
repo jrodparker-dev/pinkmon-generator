@@ -54,6 +54,10 @@ export type Options = {
   genFilter: number[];       // allowed gens
   legendCats: LegendCategory[]; // if empty => include all (including non-legends)
 
+  // Convenience toggle: excludes Legendary + Sub-Legendary from the pool.
+  // (Mythical/Paradox are controlled by legendCats.)
+  noLegendaries: boolean;
+
   attacker: AttackerPref;
 
   statMode: StatMode;

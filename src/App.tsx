@@ -16,13 +16,14 @@ const STAT_KEYS: { key: StatKey; label: string }[] = [
 const DEFAULTS: Options = {
   count: 6,
 
-  includeMega: true,
+  includeMega: false,
   includeGmax: false,
   includeRegional: true,
 
   typeFilter: [],
   genFilter: [],
   legendCats: [],
+  noLegendaries: false,
 
   attacker: 'any',
 
@@ -51,6 +52,37 @@ const PASTEL_BACKGROUNDS: string[] = [
 
 function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
+}
+
+function DropdownMulti({
+  title,
+  subtitle,
+  selectedCount,
+  rightChip,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  selectedCount: number;
+  rightChip?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="dd">
+      <summary className="ddSummary">
+        <div className="ddSummaryLeft">
+          <div className="ddTitle">{title}</div>
+          {subtitle && <div className="ddSub">{subtitle}</div>}
+        </div>
+        <div className="ddSummaryRight">
+          {rightChip}
+          <span className={selectedCount ? "ddCount on" : "ddCount"}>{selectedCount || 'All'}</span>
+          <span className="ddCaret" aria-hidden="true">▾</span>
+        </div>
+      </summary>
+      <div className="ddBody">{children}</div>
+    </details>
+  );
 }
 
 
@@ -162,7 +194,7 @@ export default function App() {
 
       <main className="grid">
         <section className="card controls">
-          <h2>Filters</h2>
+          <h2>Setup</h2>
 
           {loading && <div className="hint">Loading Showdown dex…</div>}
           {error && <div className="error">Dex load failed: {error}</div>}
@@ -202,39 +234,119 @@ export default function App() {
             </label>
           </div>
 
-          <div className="row">
-            <details className="details"><summary className="detailsSummary">Forms</summary><div className="detailsBody">
-              <label className="check"><input type="checkbox" checked={opts.includeRegional} onChange={(e) => setOpts(o => ({ ...o, includeRegional: e.target.checked }))} /><span>Regional (Alola/Galar/Hisui/Paldea)</span></label>
-              <label className="check"><input type="checkbox" checked={opts.includeMega} onChange={(e) => setOpts(o => ({ ...o, includeMega: e.target.checked }))} /><span>Mega forms</span></label>
-              <label className="check"><input type="checkbox" checked={opts.includeGmax} onChange={(e) => setOpts(o => ({ ...o, includeGmax: e.target.checked }))} /><span>Gigantamax (Gmax)</span></label>
-            </div></details>
-            <details className="details"><summary className="detailsSummary">Legends</summary><div className="detailsBody">
-              <div className="miniRow">
-                <button className="tinyBtn" type="button" onClick={() => setOpts(o => ({...o, legendCats: ['legendary','sublegendary','mythical','paradox']}))}>Select all</button>
-                <button className="tinyBtn" type="button" onClick={() => setOpts(o => ({...o, legendCats: []}))}>Clear</button>
-              </div>
-              {[
-                ['legendary','Legendaries'],
-                ['sublegendary','Sub-legendaries'],
-                ['mythical','Mythicals'],
-                ['paradox','Paradox'],
-              ].map(([key,label]) => (
-                <label key={key} className="check">
+          <div className="setupGrid">
+            <div className="setupCol">
+              <DropdownMulti
+                title="Generations"
+                subtitle="Filter by National Dex generation"
+                selectedCount={opts.genFilter.length}
+              >
+                <div className="ddTools">
+                  <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, genFilter: [1,2,3,4,5,6,7,8,9] }))}>All</button>
+                  <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, genFilter: [] }))}>None</button>
+                </div>
+                <div className="ddList">
+                  {gens.map((g) => (
+                    <label key={g} className="ddItem">
+                      <input type="checkbox" checked={selectedGens.has(g)} onChange={() => toggleGen(g)} disabled={!canGenerate} />
+                      <span>Gen {g}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="hint">Leaving this at <b>All</b> keeps every gen in the pool.</div>
+              </DropdownMulti>
+
+              <DropdownMulti
+                title="Types"
+                subtitle="Must include all selected types"
+                selectedCount={opts.typeFilter.length}
+              >
+                <div className="ddTools">
+                  <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, typeFilter: types }))}>All</button>
+                  <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, typeFilter: [] }))}>None</button>
+                </div>
+                <div className="ddList ddList2">
+                  {types.map((t) => (
+                    <label key={t} className="ddItem">
+                      <input type="checkbox" checked={selectedTypes.has(t.toLowerCase())} onChange={() => toggleType(t)} disabled={!canGenerate} />
+                      <span>{t}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedTypeChips.length > 0 && (
+                  <div className="hint">Required: {selectedTypeChips.map(t => <Badge key={t}>{t}</Badge>)}</div>
+                )}
+              </DropdownMulti>
+            </div>
+
+            <div className="setupCol">
+              <DropdownMulti
+                title="Forms"
+                subtitle="What formes can appear"
+                selectedCount={[opts.includeRegional, opts.includeMega, opts.includeGmax].filter(Boolean).length}
+                rightChip={!opts.includeMega ? <span className="miniPill">Megas off</span> : undefined}
+              >
+                <label className="check"><input type="checkbox" checked={opts.includeRegional} onChange={(e) => setOpts(o => ({ ...o, includeRegional: e.target.checked }))} /><span>Regional (Alola/Galar/Hisui/Paldea)</span></label>
+                <label className="check"><input type="checkbox" checked={opts.includeMega} onChange={(e) => setOpts(o => ({ ...o, includeMega: e.target.checked }))} /><span>Mega forms</span></label>
+                <label className="check"><input type="checkbox" checked={opts.includeGmax} onChange={(e) => setOpts(o => ({ ...o, includeGmax: e.target.checked }))} /><span>Gigantamax (Gmax)</span></label>
+              </DropdownMulti>
+
+              <DropdownMulti
+                title="Legends"
+                subtitle="Which special categories can appear"
+                selectedCount={opts.legendCats.length}
+              >
+                <label className="check">
                   <input
                     type="checkbox"
-                    checked={opts.legendCats.includes(key as any)}
+                    checked={opts.noLegendaries}
                     onChange={(e) => setOpts(o => {
-                      const set = new Set(o.legendCats);
-                      if (e.target.checked) set.add(key as any);
-                      else set.delete(key as any);
-                      return {...o, legendCats: Array.from(set) as any};
+                      const on = e.target.checked;
+                      const nextCats = on ? o.legendCats.filter(c => c !== 'legendary' && c !== 'sublegendary') : o.legendCats;
+                      return { ...o, noLegendaries: on, legendCats: nextCats };
                     })}
                   />
-                  <span>{label}</span>
+                  <span>No Legendaries (removes Legendary + Sub-legendary)</span>
                 </label>
-              ))}
-              <div className="hint">If none selected, non-legends are included too.</div>
-            </div></details>
+                <div className="ddTools">
+                  <button
+                    className="tinyBtn"
+                    type="button"
+                    onClick={() => setOpts(o => {
+                      const all = ['legendary','sublegendary','mythical','paradox'] as any;
+                      const filtered = o.noLegendaries ? all.filter((c: string) => c !== 'legendary' && c !== 'sublegendary') : all;
+                      return { ...o, legendCats: filtered };
+                    })}
+                  >
+                    Select all
+                  </button>
+                  <button className="tinyBtn" type="button" onClick={() => setOpts(o => ({...o, legendCats: []}))}>Clear</button>
+                </div>
+                {[
+                  ['legendary','Legendaries'],
+                  ['sublegendary','Sub-legendaries'],
+                  ['mythical','Mythicals'],
+                  ['paradox','Paradox'],
+                ].map(([key,label]) => (
+                  <label key={key} className="check">
+                    <input
+                      type="checkbox"
+                      checked={opts.legendCats.includes(key as any)}
+                      disabled={opts.noLegendaries && (key === 'legendary' || key === 'sublegendary')}
+                      onChange={(e) => setOpts(o => {
+                        const set = new Set(o.legendCats);
+                        if (e.target.checked) set.add(key as any);
+                        else set.delete(key as any);
+                        const next = Array.from(set) as any;
+                        return {...o, legendCats: next};
+                      })}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+                <div className="hint">If none selected, everything is allowed (unless you toggle <b>No Legendaries</b>).</div>
+              </DropdownMulti>
+            </div>
           </div>
 
           <div className="row">
@@ -262,45 +374,6 @@ export default function App() {
               <input type="checkbox" checked={opts.mystery} onChange={(e) => setOpts(o => ({ ...o, mystery: e.target.checked }))} />
               <span>Mystery reveal</span>
             </label>
-          </div>
-
-          <div className="subcard">
-            <div className="subhead"><h3>Generations</h3><div className="subheadBtns"><button type="button" className="tinyBtn" onClick={() => setOpts(o => ({...o, genFilter:[1,2,3,4,5,6,7,8,9]}))}>All</button><button type="button" className="tinyBtn" onClick={() => setOpts(o => ({...o, genFilter:[]}))}>None</button></div></div>
-            <div className="pillRow">
-              {gens.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  className={selectedGens.has(g) ? 'pill pillOn' : 'pill'}
-                  onClick={() => toggleGen(g)}
-                  disabled={!canGenerate}
-                >
-                  Gen {g}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="subcard">
-            <div className="subhead"><h3>Types</h3><div className="subheadBtns"><button type="button" className="tinyBtn" onClick={() => setOpts(o => ({...o, typeFilter: types }))}>All</button><button type="button" className="tinyBtn" onClick={() => setOpts(o => ({...o, typeFilter: [] }))}>None</button></div></div>
-            <div className="pillRow">
-              {types.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={selectedTypes.has(t.toLowerCase()) ? 'pill pillOn' : 'pill'}
-                  onClick={() => toggleType(t)}
-                  disabled={!canGenerate}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            {selectedTypeChips.length > 0 && (
-              <div className="hint">
-                Required: {selectedTypeChips.map(t => <Badge key={t}>{t}</Badge>)}
-              </div>
-            )}
           </div>
 
           <div className="subcard">
@@ -428,7 +501,7 @@ export default function App() {
           </div>
 
           <div className="footerNote">
-            Sprites & data © Pokémon Showdown / Pokémon. This tool fetches public dex data from Showdown at runtime. citeturn2search0turn2search3
+            Sprites & data © Pokémon Showdown / Pokémon. This tool fetches public dex data from Showdown at runtime.
           </div>
         </section>
       </main>

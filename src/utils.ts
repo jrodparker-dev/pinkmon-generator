@@ -50,6 +50,11 @@ export function legendCatsMatch(p: Pokemon, selected: Array<'legendary'|'sublege
   return selected.some(c => cats.has(c));
 }
 
+export function isLegendaryOrSublegendary(p: Pokemon): boolean {
+  const cats = legendCatsOf(p);
+  return cats.has('legendary') || cats.has('sublegendary');
+}
+
 export function attackerMatches(p: Pokemon, pref: 'any'|'physical'|'special'): boolean {
   if (pref === 'any') return true;
   const s = p.baseStats;
