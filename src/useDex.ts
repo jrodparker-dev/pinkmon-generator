@@ -8,6 +8,7 @@ const PS_POKEDEX_JSON = 'https://play.pokemonshowdown.com/data/pokedex.json';
 const FORCED_BANNED_IDS = new Set<string>([
   'palafinhero',
   'floetteeternal',
+  'greninjaash',
 ]);
 
 function isBannedForm(id: string, entry: any): boolean {
