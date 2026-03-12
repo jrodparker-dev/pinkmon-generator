@@ -1,4 +1,4 @@
-import type { Generated, Options, Pokemon } from './types';
+import type { BaseStats, Generated, Options, Pokemon, StatKey } from './types';
 import {
   attackerMatches,
   genFromNum,
@@ -10,6 +10,25 @@ import {
   typesMatch,
   uniq,
 } from './utils';
+
+
+const STAT_KEYS: StatKey[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+
+function fusionStatsFromParents(a: Pokemon, b: Pokemon): BaseStats | undefined {
+  if (!a.baseStats && !b.baseStats) return undefined;
+
+  const fromA = new Set(pickN(STAT_KEYS, 3));
+  const stats = {} as BaseStats;
+
+  for (const key of STAT_KEYS) {
+    const primary = fromA.has(key) ? a : b;
+    const secondary = fromA.has(key) ? b : a;
+    const value = primary.baseStats?.[key] ?? secondary.baseStats?.[key] ?? 0;
+    stats[key] = value;
+  }
+
+  return stats;
+}
 
 const BUFFS = [
   '✨ +10% power',
@@ -188,8 +207,10 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
     const a = randomOf(mons);
     const b = randomOf(mons.filter((x) => x !== a));
 
-    const typesPool = uniq(mons.flatMap((m) => m.types));
-    const fusionTypes = pickN(typesPool, Math.min(2, typesPool.length));
+    const fusionTypes = uniq([
+      randomOf(a.types),
+      randomOf(b.types),
+    ]);
 
     const fusion: Pokemon = {
       id: 'fusion',
@@ -198,13 +219,20 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       num: 0,
       name: mashName(a.name, b.name),
       types: fusionTypes.length ? fusionTypes : ['Fairy'],
-      baseStats: undefined,
+      baseStats: fusionStatsFromParents(a, b),
       abilities: options.abilityMode !== 'off' ? uniq(mons.flatMap((m) => m.abilities ?? [])) : undefined,
       tags: ['Fusion'],
     };
 
-    const fusionAbility =
-      options.abilityMode !== 'off' && fusion.abilities?.length ? randomOf(fusion.abilities) : undefined;
+    const parentAbilities = uniq([...(a.abilities ?? []), ...(b.abilities ?? [])]);
+    const randomNewAbilities = globalAbilityPool.filter((ab) => !parentAbilities.includes(ab));
+    const randomAbilityPool = randomNewAbilities.length ? randomNewAbilities : globalAbilityPool;
+
+    const fusionAbility = options.abilityMode === 'off'
+      ? undefined
+      : (Math.random() < 0.5
+          ? (parentAbilities.length ? randomOf(parentAbilities) : (randomAbilityPool.length ? randomOf(randomAbilityPool) : undefined))
+          : (randomAbilityPool.length ? randomOf(randomAbilityPool) : (parentAbilities.length ? randomOf(parentAbilities) : undefined)));
     const fusionBuff = options.includeBuff ? randomOf(BUFFS) : undefined;
 
     results.push({
@@ -213,6 +241,7 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       isShiny: false,
       ability: fusionAbility,
       buff: fusionBuff,
+      fusionParents: [a, b],
       isFusion: true,
       revealed: options.mystery ? false : true,
     });

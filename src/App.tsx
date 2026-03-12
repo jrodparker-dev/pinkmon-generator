@@ -442,7 +442,15 @@ export default function App() {
                   <div className="spriteWrap">
                     {r.revealed ? (
                       isFusion ? (
-                        <img className="sprite" src={`${import.meta.env.BASE_URL}fusion.svg`} alt="Fusion" loading="lazy" />
+                        r.fusionParents ? (
+                          <div className="fusionSpriteRow" aria-label={`Fusion of ${r.fusionParents[0].name} and ${r.fusionParents[1].name}`}>
+                            <SpriteImg p={r.fusionParents[0]} shiny={false} className="sprite fusionSprite" />
+                            <span className="fusionPlus" aria-hidden="true">＋</span>
+                            <SpriteImg p={r.fusionParents[1]} shiny={false} className="sprite fusionSprite" />
+                          </div>
+                        ) : (
+                          <img className="sprite" src={`${import.meta.env.BASE_URL}fusion.svg`} alt="Fusion" loading="lazy" />
+                        )
                       ) : (
                         <SpriteImg p={p} shiny={r.isShiny} className="sprite" />
                       )
