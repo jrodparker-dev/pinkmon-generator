@@ -2,7 +2,6 @@ import type { Generated, Options, Pokemon } from './types';
 import {
   attackerMatches,
   genFromNum,
-  isLegendaryOrSublegendary,
   legendCatsMatch,
   mashName,
   statsMatch,
@@ -121,12 +120,18 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
     pool = pool.filter((p) => isAllowedByGens(p, options.genFilter));
   }
 
-  if (options.noLegendaries) {
-    pool = pool.filter((p) => !isLegendaryOrSublegendary(p));
-  }
-
   if (options.legendCats.length) {
-    pool = pool.filter((p) => legendCatsMatch(p, options.legendCats));
+    if (options.legendMode === 'include') {
+      const selectedPool = pool.filter((p) => legendCatsMatch(p, options.legendCats));
+      const nonLegendPool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox']));
+      pool = uniq([...nonLegendPool, ...selectedPool]);
+    } else if (options.legendMode === 'exclude') {
+      pool = pool.filter((p) => !legendCatsMatch(p, options.legendCats));
+    } else {
+      pool = pool.filter((p) => legendCatsMatch(p, options.legendCats));
+    }
+  } else if (options.legendMode === 'limit') {
+    pool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox']));
   }
 
   if (options.attacker !== 'any') {
@@ -154,11 +159,8 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
 
     let displayTypes: string[] | undefined;
     if (options.randomTyping && p.id !== 'fusion' && allTypes.length) {
-      const banned = new Set(p.types.map(t => t.toLowerCase()));
-      const candidates = allTypes.filter(t => !banned.has(t.toLowerCase()));
-      if (candidates.length) {
-        displayTypes = [randomOf(candidates)];
-      }
+      const typeCount = Math.random() < 0.5 ? 1 : 2;
+      displayTypes = pickN(allTypes, Math.min(typeCount, allTypes.length));
     }
 
     let ability: string | undefined;

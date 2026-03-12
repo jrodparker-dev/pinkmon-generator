@@ -86,8 +86,8 @@ export function statsMatch(p: Pokemon, mode: 'min'|'max', limits: Partial<BaseSt
 
 export function typesMatch(p: Pokemon, required: string[]): boolean {
   if (!required.length) return true;
-  const got = p.types.map(t => t.toLowerCase());
-  return required.every(r => got.includes(r.toLowerCase()));
+  const got = new Set(p.types.map(t => t.toLowerCase()));
+  return required.some(r => got.has(r.toLowerCase()));
 }
 
 export function randomOf<T>(arr: T[]): T {
