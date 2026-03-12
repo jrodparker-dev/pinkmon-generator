@@ -142,7 +142,7 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
   if (options.legendCats.length) {
     if (options.legendMode === 'include') {
       const selectedPool = pool.filter((p) => legendCatsMatch(p, options.legendCats));
-      const nonLegendPool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox']));
+      const nonLegendPool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox', 'ultrabeast']));
       pool = uniq([...nonLegendPool, ...selectedPool]);
     } else if (options.legendMode === 'exclude') {
       pool = pool.filter((p) => !legendCatsMatch(p, options.legendCats));
@@ -150,7 +150,7 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       pool = pool.filter((p) => legendCatsMatch(p, options.legendCats));
     }
   } else if (options.legendMode === 'limit') {
-    pool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox']));
+    pool = pool.filter((p) => !legendCatsMatch(p, ['legendary', 'sublegendary', 'mythical', 'paradox', 'ultrabeast']));
   }
 
   if (options.attacker !== 'any') {
