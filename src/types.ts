@@ -40,6 +40,7 @@ export type AbilityMode = 'off' | 'species' | 'random';
 export type StatMode = 'min' | 'max';
 
 export type LegendCategory = 'legendary' | 'sublegendary' | 'mythical' | 'paradox';
+export type LegendMode = 'include' | 'exclude' | 'limit';
 
 export type Options = {
   count: number;
@@ -50,13 +51,10 @@ export type Options = {
   includeRegional: boolean;
 
   // Filters
-  typeFilter: string[];      // must include all selected type(s)
+  typeFilter: string[];      // matches any selected type(s)
   genFilter: number[];       // allowed gens
-  legendCats: LegendCategory[]; // if empty => include all (including non-legends)
-
-  // Convenience toggle: excludes Legendary + Sub-Legendary from the pool.
-  // (Mythical/Paradox are controlled by legendCats.)
-  noLegendaries: boolean;
+  legendCats: LegendCategory[];
+  legendMode: LegendMode;
 
   attacker: AttackerPref;
 
@@ -85,6 +83,7 @@ export type Generated = {
 
   ability?: string;
   buff?: string;
+  fusionParents?: [Pokemon, Pokemon];
   isFusion?: boolean;
   revealed?: boolean; // for mystery
 };
