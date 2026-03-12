@@ -39,7 +39,7 @@ export type AbilityMode = 'off' | 'species' | 'random';
 
 export type StatMode = 'min' | 'max';
 
-export type LegendCategory = 'legendary' | 'sublegendary' | 'mythical' | 'paradox';
+export type LegendCategory = 'legendary' | 'sublegendary' | 'mythical' | 'paradox' | 'ultrabeast';
 export type LegendMode = 'include' | 'exclude' | 'limit';
 
 export type Options = {

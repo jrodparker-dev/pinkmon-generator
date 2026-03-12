@@ -1,4 +1,4 @@
-import type { BaseStats, Pokemon, StatKey } from './types';
+import type { BaseStats, LegendCategory, Pokemon, StatKey } from './types';
 
 export function toID(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -24,27 +24,72 @@ export function genFromNum(num: number): number {
   return 9;
 }
 
-// Legend-category mapping from PS tags.
-// PS uses tags like: "Legendary", "Sub-Legendary", "Mythical", "Paradox".
-export function legendCatsOf(p: Pokemon): Set<'legendary'|'sublegendary'|'mythical'|'paradox'> {
-  const out = new Set<'legendary'|'sublegendary'|'mythical'|'paradox'>();
-  const tags = (p.tags ?? []).map(t => String(t).toLowerCase());
+const LEGENDARY_NUMS = new Set<number>([
+  144, 145, 146, 150, 243, 244, 245, 249, 250, 377, 378, 379, 380, 381, 382, 383, 384, 483, 484,
+  487, 488, 638, 639, 640, 643, 644, 645, 716, 717, 718, 785, 786, 787, 788, 789, 790, 791, 792,
+  800, 888, 889, 890, 1001, 1002, 1003, 1004, 1017, 1018,
+]);
 
-  if (tags.some(t => t.includes('mythical'))) out.add('mythical');
-  if (tags.some(t => t.includes('sub-legendary') || t.includes('sublegendary'))) out.add('sublegendary');
-  if (tags.some(t => t.includes('legendary') || (t.includes('legend') && !t.includes('sub')))) out.add('legendary');
-  if (tags.some(t => t.includes('paradox'))) out.add('paradox');
+const LEGENDARY_IDS = new Set<string>([
+  'kyurem',
+  'kyuremwhite',
+  'kyuremblack',
+  'koraidon',
+  'miraidon',
+]);
 
-  // Fallback heuristics in case tags are absent (keeps behavior non-empty but conservative)
-  if (!out.size) {
-    const n = p.name.toLowerCase();
-    if (n.includes('tapu ')) out.add('sublegendary');
-  }
+const SUBLEGENDARY_NUMS = new Set<number>([
+  480, 481, 482, 485, 486, 641, 642, 645, 772, 773, 785, 786, 787, 788, 793, 794, 795, 796, 797,
+  798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 888, 889, 891, 892, 894, 895, 896,
+  897, 898, 1009, 1010, 1020, 1021, 1022, 1023,
+]);
+
+const MYTHICAL_NUMS = new Set<number>([
+  151, 251, 385, 386, 489, 490, 491, 492, 493, 494, 647, 648, 649, 719, 720, 721, 801, 802, 807,
+  808, 809, 893, 1024, 1025,
+]);
+
+const PARADOX_NUMS = new Set<number>([
+  984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 1005, 1006, 1009, 1010, 1020, 1021,
+  1022, 1023,
+]);
+
+const ULTRA_BEAST_NUMS = new Set<number>([793, 794, 795, 796, 797, 798, 799, 803, 804, 805, 806]);
+
+const SUBLEGENDARY_IDS = new Set<string>(['heatran', 'kubfu', 'urshifu', 'urshifurapidstrike']);
+
+function tagSetOf(p: Pokemon): Set<string> {
+  return new Set((p.tags ?? []).map((t) => String(t).toLowerCase()));
+}
+
+export function legendCatsOf(p: Pokemon): Set<LegendCategory> {
+  const out = new Set<LegendCategory>();
+  const tags = tagSetOf(p);
+  const id = toID(p.id);
+  const name = p.name.toLowerCase();
+  const nameId = toID(p.name);
+
+  if (tags.has('mythical') || MYTHICAL_NUMS.has(p.num)) out.add('mythical');
+  if (
+    tags.has('sub-legendary') ||
+    tags.has('sublegendary') ||
+    SUBLEGENDARY_NUMS.has(p.num) ||
+    SUBLEGENDARY_IDS.has(id)
+  ) out.add('sublegendary');
+  if (
+    tags.has('legendary') ||
+    LEGENDARY_NUMS.has(p.num) ||
+    LEGENDARY_IDS.has(id) ||
+    LEGENDARY_IDS.has(nameId) ||
+    (name.includes('tapu ') && !out.has('sublegendary'))
+  ) out.add('legendary');
+  if (tags.has('paradox') || PARADOX_NUMS.has(p.num)) out.add('paradox');
+  if (tags.has('ultra beast') || tags.has('ultrabeast') || ULTRA_BEAST_NUMS.has(p.num)) out.add('ultrabeast');
 
   return out;
 }
 
-export function legendCatsMatch(p: Pokemon, selected: Array<'legendary'|'sublegendary'|'mythical'|'paradox'>): boolean {
+export function legendCatsMatch(p: Pokemon, selected: LegendCategory[]): boolean {
   if (!selected.length) return true;
   const cats = legendCatsOf(p);
   return selected.some(c => cats.has(c));

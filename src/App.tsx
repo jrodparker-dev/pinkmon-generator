@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
+import type { LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 
@@ -316,7 +316,7 @@ export default function App() {
                   <button
                     className="tinyBtn"
                     type="button"
-                    onClick={() => setOpts(o => ({ ...o, legendCats: ['legendary','sublegendary','mythical','paradox'] }))}
+                    onClick={() => setOpts(o => ({ ...o, legendCats: ['legendary','sublegendary','mythical','paradox','ultrabeast'] }))}
                   >
                     Select all
                   </button>
@@ -327,16 +327,17 @@ export default function App() {
                   ['sublegendary','Sub-legendaries'],
                   ['mythical','Mythicals'],
                   ['paradox','Paradox'],
+                  ['ultrabeast','Ultra Beasts'],
                 ].map(([key,label]) => (
                   <label key={key} className="check">
                     <input
                       type="checkbox"
-                      checked={opts.legendCats.includes(key as any)}
+                      checked={opts.legendCats.includes(key as LegendCategory)}
                       onChange={(e) => setOpts(o => {
                         const set = new Set(o.legendCats);
-                        if (e.target.checked) set.add(key as any);
-                        else set.delete(key as any);
-                        const next = Array.from(set) as any;
+                        if (e.target.checked) set.add(key as LegendCategory);
+                        else set.delete(key as LegendCategory);
+                        const next = Array.from(set) as LegendCategory[];
                         return {...o, legendCats: next};
                       })}
                     />
