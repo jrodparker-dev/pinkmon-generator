@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { Options, ShinyOdds, StatKey, Generated } from './types';
+import type { LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 
@@ -23,7 +23,7 @@ const DEFAULTS: Options = {
   typeFilter: [],
   genFilter: [],
   legendCats: [],
-  noLegendaries: false,
+  legendMode: 'include',
 
   attacker: 'any',
 
@@ -262,7 +262,7 @@ export default function App() {
 
               <DropdownMulti
                 title="Types"
-                subtitle="Must include all selected types"
+                subtitle="Shows Pokémon matching any selected type"
                 selectedCount={opts.typeFilter.length}
               >
                 <div className="ddTools">
@@ -278,7 +278,7 @@ export default function App() {
                   ))}
                 </div>
                 {selectedTypeChips.length > 0 && (
-                  <div className="hint">Required: {selectedTypeChips.map(t => <Badge key={t}>{t}</Badge>)}</div>
+                  <div className="hint">Matching: {selectedTypeChips.map(t => <Badge key={t}>{t}</Badge>)}</div>
                 )}
               </DropdownMulti>
             </div>
@@ -288,7 +288,6 @@ export default function App() {
                 title="Forms"
                 subtitle="What formes can appear"
                 selectedCount={[opts.includeRegional, opts.includeMega, opts.includeGmax].filter(Boolean).length}
-                rightChip={!opts.includeMega ? <span className="miniPill">Megas off</span> : undefined}
               >
                 <label className="check"><input type="checkbox" checked={opts.includeRegional} onChange={(e) => setOpts(o => ({ ...o, includeRegional: e.target.checked }))} /><span>Regional (Alola/Galar/Hisui/Paldea)</span></label>
                 <label className="check"><input type="checkbox" checked={opts.includeMega} onChange={(e) => setOpts(o => ({ ...o, includeMega: e.target.checked }))} /><span>Mega forms</span></label>
@@ -297,30 +296,27 @@ export default function App() {
 
               <DropdownMulti
                 title="Legends"
-                subtitle="Which special categories can appear"
+                subtitle="Choose categories and how to use them"
                 selectedCount={opts.legendCats.length}
+                rightChip={<span className="miniPill">{opts.legendMode === 'include' ? 'Include' : opts.legendMode === 'exclude' ? 'Exclude' : 'Limit to'}</span>}
               >
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={opts.noLegendaries}
-                    onChange={(e) => setOpts(o => {
-                      const on = e.target.checked;
-                      const nextCats = on ? o.legendCats.filter(c => c !== 'legendary' && c !== 'sublegendary') : o.legendCats;
-                      return { ...o, noLegendaries: on, legendCats: nextCats };
-                    })}
-                  />
-                  <span>No Legendaries (removes Legendary + Sub-legendary)</span>
-                </label>
+                <div className="ddTools">
+                  {(['include', 'exclude', 'limit'] as LegendMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      className="tinyBtn"
+                      type="button"
+                      onClick={() => setOpts(o => ({ ...o, legendMode: mode }))}
+                    >
+                      {mode === 'limit' ? 'Limit To' : mode[0].toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
                 <div className="ddTools">
                   <button
                     className="tinyBtn"
                     type="button"
-                    onClick={() => setOpts(o => {
-                      const all = ['legendary','sublegendary','mythical','paradox'] as any;
-                      const filtered = o.noLegendaries ? all.filter((c: string) => c !== 'legendary' && c !== 'sublegendary') : all;
-                      return { ...o, legendCats: filtered };
-                    })}
+                    onClick={() => setOpts(o => ({ ...o, legendCats: ['legendary','sublegendary','mythical','paradox'] }))}
                   >
                     Select all
                   </button>
@@ -336,7 +332,6 @@ export default function App() {
                     <input
                       type="checkbox"
                       checked={opts.legendCats.includes(key as any)}
-                      disabled={opts.noLegendaries && (key === 'legendary' || key === 'sublegendary')}
                       onChange={(e) => setOpts(o => {
                         const set = new Set(o.legendCats);
                         if (e.target.checked) set.add(key as any);
@@ -348,7 +343,7 @@ export default function App() {
                     <span>{label}</span>
                   </label>
                 ))}
-                <div className="hint">If none selected, everything is allowed (unless you toggle <b>No Legendaries</b>).</div>
+                <div className="hint">{opts.legendMode === 'include' ? 'Include adds selected categories to the normal pool.' : opts.legendMode === 'exclude' ? 'Exclude removes selected categories from the pool.' : 'Limit To shows only selected categories.'}</div>
               </DropdownMulti>
             </div>
           </div>
@@ -368,7 +363,7 @@ export default function App() {
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.randomTyping} onChange={(e) => setOpts(o => ({ ...o, randomTyping: e.target.checked }))} />
-              <span>Random typing</span>
+              <span>Random typing (single or dual)</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.fusion} onChange={(e) => setOpts(o => ({ ...o, fusion: e.target.checked }))} />
