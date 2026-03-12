@@ -30,6 +30,14 @@ const LEGENDARY_NUMS = new Set<number>([
   800, 888, 889, 890, 1001, 1002, 1003, 1004, 1017, 1018,
 ]);
 
+const LEGENDARY_IDS = new Set<string>([
+  'kyurem',
+  'kyuremwhite',
+  'kyuremblack',
+  'koraidon',
+  'miraidon',
+]);
+
 const SUBLEGENDARY_NUMS = new Set<number>([
   480, 481, 482, 485, 486, 641, 642, 645, 772, 773, 785, 786, 787, 788, 793, 794, 795, 796, 797,
   798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 888, 889, 891, 892, 894, 895, 896,
@@ -59,6 +67,7 @@ export function legendCatsOf(p: Pokemon): Set<LegendCategory> {
   const tags = tagSetOf(p);
   const id = toID(p.id);
   const name = p.name.toLowerCase();
+  const nameId = toID(p.name);
 
   if (tags.has('mythical') || MYTHICAL_NUMS.has(p.num)) out.add('mythical');
   if (
@@ -70,6 +79,8 @@ export function legendCatsOf(p: Pokemon): Set<LegendCategory> {
   if (
     tags.has('legendary') ||
     LEGENDARY_NUMS.has(p.num) ||
+    LEGENDARY_IDS.has(id) ||
+    LEGENDARY_IDS.has(nameId) ||
     (name.includes('tapu ') && !out.has('sublegendary'))
   ) out.add('legendary');
   if (tags.has('paradox') || PARADOX_NUMS.has(p.num)) out.add('paradox');

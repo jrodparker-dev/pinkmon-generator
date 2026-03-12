@@ -5,7 +5,13 @@ import { genFromNum, uniq } from './utils';
 const PS_POKEDEX_JSON = 'https://play.pokemonshowdown.com/data/pokedex.json';
 
 
+const FORCED_BANNED_IDS = new Set<string>([
+  'palafinhero',
+  'floetteeternal',
+]);
+
 function isBannedForm(id: string, entry: any): boolean {
+  if (FORCED_BANNED_IDS.has(id)) return true;
   const baseSpecies = String(entry.baseSpecies || entry.name || '').toLowerCase();
   const forme = String(entry.forme || '').toLowerCase();
 
