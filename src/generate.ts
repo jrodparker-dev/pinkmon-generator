@@ -1,4 +1,4 @@
-import type { BaseStats, Generated, Options, Pokemon, StatKey } from './types';
+import type { BaseStats, BuffMode, Generated, Options, Pokemon, StatKey } from './types';
 import {
   attackerMatches,
   genFromNum,
