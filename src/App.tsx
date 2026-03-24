@@ -138,6 +138,7 @@ export default function App() {
   const [opts, setOpts] = useState<Options>(DEFAULTS);
   const [results, setResults] = useState<Generated[]>([]);
   const [cardSkins, setCardSkins] = useState<string[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const canGenerate = !loading && !error && pokemon.length > 0;
 
@@ -219,8 +220,30 @@ export default function App() {
           <button className="btn btnGhost" onClick={() => { setOpts(DEFAULTS); setResults([]); }}>
             Reset
           </button>
+          <button className="btn btnGhost" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </button>
         </div>
       </header>
+
+      {settingsOpen && (
+        <div className="modalOverlay" role="dialog" aria-modal="true" aria-label="Mode settings">
+          <div className="modalCard">
+            <div className="modalHead">
+              <h3>Choose Your Mode!</h3>
+              <button className="btn btnGhost modalClose" onClick={() => setSettingsOpen(false)}>Close</button>
+            </div>
+            <div className="modeGrid">
+              {Array.from({ length: 6 }, (_, i) => (
+                <label key={i} className="check modeCheck">
+                  <input type="checkbox" />
+                  <span>Placeholder</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="grid">
         <section className="card controls">
