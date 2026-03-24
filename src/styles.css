@@ -584,7 +584,7 @@ h1{margin:0; font-size:22px; letter-spacing:0.2px;}
 }
 .statLabel{color:var(--muted); font-weight:800;}
 .statVal{font-weight:900;}
-.statValBuffed{color:#ff4fb8; text-shadow:0 0 10px rgba(255,79,184,0.4);}
+.statValBuffed{color:#ff1493; text-shadow:0 0 12px rgba(255,20,147,0.65); font-weight:900;}
 
 .footerNote{
   margin-top:12px;

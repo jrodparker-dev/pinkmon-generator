@@ -36,8 +36,7 @@ export type AttackerPref = 'any' | 'physical' | 'special';
 export type ShinyOdds = 4096 | 2048 | 512 | 128;
 
 export type AbilityMode = 'off' | 'species' | 'random';
-export type BuffMode =
-  | 'off'
+export type BuffKind =
   | 'custom-move'
   | 'chosen-ability'
   | 'plus-one-stat'
@@ -75,7 +74,10 @@ export type Options = {
 
   // Extras
   abilityMode: AbilityMode;
-  buffMode: BuffMode;
+  includeBuff: boolean;
+  buffKinds: BuffKind[];
+  plusOneAmounts: number[];
+  plusTwoAmounts: number[];
   fusion: boolean;
   mystery: boolean;
 

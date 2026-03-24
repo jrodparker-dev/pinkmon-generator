@@ -1,4 +1,4 @@
-import type { BaseStats, BuffMode, Generated, Options, Pokemon, StatKey } from './types';
+import type { BaseStats, BuffKind, Generated, Options, Pokemon, StatKey } from './types';
 import {
   attackerMatches,
   genFromNum,
@@ -11,17 +11,7 @@ import {
   uniq,
 } from './utils';
 
-
 const STAT_KEYS: StatKey[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
-type BuffMode =
-  | 'off'
-  | 'custom-move'
-  | 'chosen-ability'
-  | 'plus-one-stat'
-  | 'plus-two-stats'
-  | 'new-typing'
-  | 'double-lowest-stat'
-  | 'match-highest-stat';
 
 function copyBaseStats(stats?: BaseStats): BaseStats | undefined {
   return stats ? { ...stats } : undefined;
@@ -43,18 +33,14 @@ function fusionStatsFromParents(a: Pokemon, b: Pokemon): BaseStats | undefined {
   return stats;
 }
 
-function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Generated, 'buff' | 'displayStats' | 'buffedStatKeys' | 'ability' | 'displayTypes'> {
+function applyBuff(kind: BuffKind, mon: Pokemon, abilityPool: string[], options: Options): Pick<Generated, 'buff' | 'displayStats' | 'buffedStatKeys' | 'ability' | 'displayTypes'> {
   const displayStats = copyBaseStats(mon.baseStats);
 
-  if (mode === 'off') {
-    return { buff: undefined, displayStats, buffedStatKeys: [] };
-  }
-
-  if (mode === 'custom-move') {
+  if (kind === 'custom-move') {
     return { buff: 'Custom Move', displayStats, buffedStatKeys: [] };
   }
 
-  if (mode === 'chosen-ability') {
+  if (kind === 'chosen-ability') {
     return {
       buff: 'Chosen Ability',
       ability: abilityPool.length ? randomOf(abilityPool) : undefined,
@@ -63,12 +49,12 @@ function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Ge
     };
   }
 
-  if (mode === 'new-typing') {
+  if (kind === 'new-typing') {
     return { buff: 'New Typing', displayStats, buffedStatKeys: [] };
   }
 
   if (!displayStats) {
-    const labels: Record<Exclude<BuffMode, 'off'>, string> = {
+    const labels: Record<BuffKind, string> = {
       'custom-move': 'Custom Move',
       'chosen-ability': 'Chosen Ability',
       'plus-one-stat': '+10 to one stat',
@@ -77,25 +63,27 @@ function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Ge
       'double-lowest-stat': 'Double its lowest stat',
       'match-highest-stat': 'Change 1 stat to match its highest stat',
     };
-    return { buff: labels[mode], displayStats: undefined, buffedStatKeys: [] };
+    return { buff: labels[kind], displayStats: undefined, buffedStatKeys: [] };
   }
 
-  if (mode === 'plus-one-stat') {
-    const amt = randomOf([10, 15, 20, 25, 30, 35, 40]);
+  if (kind === 'plus-one-stat') {
+    const amounts = options.plusOneAmounts.length ? options.plusOneAmounts : [10, 15, 20, 25, 30, 35, 40];
+    const amt = randomOf(amounts);
     const stat = randomOf(STAT_KEYS);
     displayStats[stat] += amt;
     return { buff: `+${amt} to one stat`, displayStats, buffedStatKeys: [stat] };
   }
 
-  if (mode === 'plus-two-stats') {
-    const amt = randomOf([10, 15, 20]);
+  if (kind === 'plus-two-stats') {
+    const amounts = options.plusTwoAmounts.length ? options.plusTwoAmounts : [10, 15, 20];
+    const amt = randomOf(amounts);
     const [a, b] = pickN(STAT_KEYS, 2);
     displayStats[a] += amt;
     displayStats[b] += amt;
     return { buff: `+${amt} to two stats`, displayStats, buffedStatKeys: [a, b] };
   }
 
-  if (mode === 'double-lowest-stat') {
+  if (kind === 'double-lowest-stat') {
     const min = Math.min(...STAT_KEYS.map((k) => displayStats[k]));
     const lowest = STAT_KEYS.filter((k) => displayStats[k] === min);
     const key = randomOf(lowest);
@@ -111,7 +99,7 @@ function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Ge
   return { buff: 'Change 1 stat to match its highest stat', displayStats, buffedStatKeys: [target] };
 }
 
-const RANDOM_BUFF_MODES: Exclude<BuffMode, 'off'>[] = [
+const DEFAULT_BUFF_KINDS: BuffKind[] = [
   'custom-move',
   'chosen-ability',
   'plus-one-stat',
@@ -120,6 +108,10 @@ const RANDOM_BUFF_MODES: Exclude<BuffMode, 'off'>[] = [
   'double-lowest-stat',
   'match-highest-stat',
 ];
+
+function selectedBuffKinds(options: Options): BuffKind[] {
+  return options.buffKinds.length ? options.buffKinds : DEFAULT_BUFF_KINDS;
+}
 
 function isAllowedByGens(p: Pokemon, allowed: number[]): boolean {
   if (!allowed.length) return true;
@@ -139,13 +131,6 @@ function isGmaxId(id: string): boolean {
   return id.includes('gmax') || id.includes('gigantamax');
 }
 
-/**
- * Generate sprite-id variants by progressively removing hyphens.
- * Examples:
- * - tapu-fini -> tapufini
- * - basculin-white-striped -> basculin-whitestriped -> basculinwhitestriped
- * - necrozma-dusk-mane -> necrozma-duskmane -> necrozmaduskmane
- */
 function spriteIdVariants(id: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -184,8 +169,6 @@ export function spriteFallbacks(p: Pokemon, shiny: boolean): string[] {
         ['dex', 'png'],
       ];
 
-  // Try form spriteId, then progressively de-hyphenated variants.
-  // Finally, always fall back to base species variants.
   const candidates = uniq([
     ...spriteIdVariants(p.spriteId),
     ...spriteIdVariants(p.baseSpriteId),
@@ -204,8 +187,6 @@ export function spriteFallbacks(p: Pokemon, shiny: boolean): string[] {
 export function generate(pokemon: Pokemon[], options: Options): Generated[] {
   let pool = pokemon.slice();
 
-  // Hard exclusions are handled in useDex(). Here we only handle the user's
-  // include/exclude toggles for the supported form categories.
   pool = pool.filter((p) => {
     if (isGmaxId(p.id) && !options.includeGmax) return false;
     if (isMegaForm(p) && !options.includeMega) return false;
@@ -255,6 +236,8 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       .filter((a) => a && a.toLowerCase() !== 'no ability')
   );
 
+  const allowedBuffKinds = selectedBuffKinds(options);
+
   const results: Generated[] = picked.map((p) => {
     const isShiny = Math.floor(Math.random() * options.shinyOdds) === 0;
 
@@ -271,8 +254,8 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       ability = globalAbilityPool.length ? randomOf(globalAbilityPool) : undefined;
     }
 
-    const rolledBuff = options.includeBuff ? randomOf(RANDOM_BUFF_MODES) : 'off';
-    const buffResult = applyBuff(rolledBuff, p, globalAbilityPool);
+    const rolledBuff = options.includeBuff ? randomOf(allowedBuffKinds) : undefined;
+    const buffResult = rolledBuff ? applyBuff(rolledBuff, p, globalAbilityPool, options) : { buff: undefined, displayStats: copyBaseStats(p.baseStats), buffedStatKeys: [] as StatKey[] };
     if (rolledBuff === 'new-typing' && allTypes.length) {
       buffResult.displayTypes = pickN(allTypes, Math.random() < 0.5 ? 1 : 2);
     }
@@ -325,8 +308,8 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       : (Math.random() < 0.5
           ? (parentAbilities.length ? randomOf(parentAbilities) : (randomAbilityPool.length ? randomOf(randomAbilityPool) : undefined))
           : (randomAbilityPool.length ? randomOf(randomAbilityPool) : (parentAbilities.length ? randomOf(parentAbilities) : undefined)));
-    const fusionBuffMode = options.includeBuff ? randomOf(RANDOM_BUFF_MODES) : 'off';
-    const fusionBuffResult = applyBuff(fusionBuffMode, fusion, globalAbilityPool);
+    const fusionBuffMode = options.includeBuff ? randomOf(allowedBuffKinds) : undefined;
+    const fusionBuffResult = fusionBuffMode ? applyBuff(fusionBuffMode, fusion, globalAbilityPool, options) : { buff: undefined, displayStats: copyBaseStats(fusion.baseStats), buffedStatKeys: [] as StatKey[] };
     if (fusionBuffMode === 'new-typing' && allTypes.length) {
       fusionBuffResult.displayTypes = pickN(allTypes, Math.random() < 0.5 ? 1 : 2);
     }

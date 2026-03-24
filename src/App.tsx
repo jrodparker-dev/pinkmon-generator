@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { BuffMode, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
+import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 
@@ -34,12 +34,29 @@ const DEFAULTS: Options = {
   randomTyping: false,
 
   abilityMode: 'species',
-  buffMode: 'off',
+  includeBuff: false,
+  buffKinds: ['custom-move', 'chosen-ability', 'plus-one-stat', 'plus-two-stats', 'new-typing', 'double-lowest-stat', 'match-highest-stat'],
+  plusOneAmounts: [10, 15, 20, 25, 30, 35, 40],
+  plusTwoAmounts: [10, 15, 20],
   fusion: false,
   mystery: false,
 
   shinyOdds: 512,
 };
+
+
+const BUFF_KIND_OPTIONS: { key: BuffKind; label: string }[] = [
+  { key: 'custom-move', label: 'Custom Move' },
+  { key: 'chosen-ability', label: 'Chosen Ability' },
+  { key: 'plus-one-stat', label: '(+10/15/20/25/30/35/40) to one stat' },
+  { key: 'plus-two-stats', label: '(+10/15/20) to two stats' },
+  { key: 'new-typing', label: 'New Typing' },
+  { key: 'double-lowest-stat', label: 'Double its lowest stat' },
+  { key: 'match-highest-stat', label: 'Change 1 stat to match its highest stat' },
+];
+
+const PLUS_ONE_VALUES = [10, 15, 20, 25, 30, 35, 40];
+const PLUS_TWO_VALUES = [10, 15, 20];
 
 const PASTEL_BACKGROUNDS: string[] = [
   `radial-gradient(circle at 15% 20%, rgba(255,182,193,0.22), transparent 55%), radial-gradient(circle at 85% 30%, rgba(186, 85, 211,0.20), transparent 55%), rgba(255,255,255,0.04)`,
@@ -201,6 +218,34 @@ export default function App() {
   }
 
   const selectedTypeChips = useMemo(() => opts.typeFilter.slice().sort((a, b) => a.localeCompare(b)), [opts.typeFilter]);
+  const selectedBuffKinds = useMemo(() => new Set(opts.buffKinds), [opts.buffKinds]);
+
+  function toggleBuffKind(kind: BuffKind) {
+    setOpts((o) => {
+      const set = new Set(o.buffKinds);
+      if (set.has(kind)) set.delete(kind);
+      else set.add(kind);
+      return { ...o, buffKinds: Array.from(set) as BuffKind[] };
+    });
+  }
+
+  function togglePlusOneAmount(amount: number) {
+    setOpts((o) => {
+      const set = new Set(o.plusOneAmounts);
+      if (set.has(amount)) set.delete(amount);
+      else set.add(amount);
+      return { ...o, plusOneAmounts: Array.from(set).sort((a, b) => a - b) };
+    });
+  }
+
+  function togglePlusTwoAmount(amount: number) {
+    setOpts((o) => {
+      const set = new Set(o.plusTwoAmounts);
+      if (set.has(amount)) set.delete(amount);
+      else set.add(amount);
+      return { ...o, plusTwoAmounts: Array.from(set).sort((a, b) => a - b) };
+    });
+  }
 
   return (
     <div className="app">
@@ -408,22 +453,9 @@ export default function App() {
                 <option value="random">Random ability</option>
               </select>
             </label>
-            <label className="field">
-              <span className="label">Buff</span>
-              <select
-                className="select"
-                value={opts.buffMode}
-                onChange={(e) => setOpts(o => ({ ...o, buffMode: e.target.value as BuffMode }))}
-              >
-                <option value="off">Off</option>
-                <option value="custom-move">Custom Move</option>
-                <option value="chosen-ability">Chosen Ability</option>
-                <option value="plus-one-stat">(+10/15/20/25/30/35/40) to one stat</option>
-                <option value="plus-two-stats">(+10/15/20) to two stats</option>
-                <option value="new-typing">New Typing</option>
-                <option value="double-lowest-stat">Double its lowest stat</option>
-                <option value="match-highest-stat">Change 1 stat to match its highest stat</option>
-              </select>
+            <label className="check">
+              <input type="checkbox" checked={opts.includeBuff} onChange={(e) => setOpts(o => ({ ...o, includeBuff: e.target.checked }))} />
+              <span>Include buff</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.randomTyping} onChange={(e) => setOpts(o => ({ ...o, randomTyping: e.target.checked }))} />
@@ -438,6 +470,53 @@ export default function App() {
               <span>Mystery reveal</span>
             </label>
           </div>
+
+          {opts.includeBuff && (
+            <DropdownMulti title="Buff types" selectedCount={opts.buffKinds.length} subtitle="Pick buff styles and values">
+              <div className="ddTools">
+                <button type="button" className="tinyBtn" onClick={() => setOpts((o) => ({ ...o, buffKinds: BUFF_KIND_OPTIONS.map((b) => b.key) }))}>All</button>
+                <button type="button" className="tinyBtn" onClick={() => setOpts((o) => ({ ...o, buffKinds: [] }))}>None</button>
+              </div>
+              <div className="ddList">
+                {BUFF_KIND_OPTIONS.map((buff) => (
+                  <label key={buff.key} className="ddItem">
+                    <input type="checkbox" checked={selectedBuffKinds.has(buff.key)} onChange={() => toggleBuffKind(buff.key)} />
+                    <span>{buff.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              {selectedBuffKinds.has('plus-one-stat') && (
+                <div>
+                  <div className="hint">(+X) to one stat</div>
+                  <div className="ddList ddList2">
+                    {PLUS_ONE_VALUES.map((amount) => (
+                      <label key={amount} className="ddItem">
+                        <input type="checkbox" checked={opts.plusOneAmounts.includes(amount)} onChange={() => togglePlusOneAmount(amount)} />
+                        <span>+{amount}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedBuffKinds.has('plus-two-stats') && (
+                <div>
+                  <div className="hint">(+X) to two stats</div>
+                  <div className="ddList ddList2">
+                    {PLUS_TWO_VALUES.map((amount) => (
+                      <label key={amount} className="ddItem">
+                        <input type="checkbox" checked={opts.plusTwoAmounts.includes(amount)} onChange={() => togglePlusTwoAmount(amount)} />
+                        <span>+{amount}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="hint">Generator will randomly pick from the checked buff types.</div>
+            </DropdownMulti>
+          )}
 
           <div className="subcard">
             <div className="subhead">
@@ -548,7 +627,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {r.revealed && opts.buffMode !== 'off' && (
+                    {r.revealed && opts.includeBuff && (
                       <div className="line">
                         <span className="lineLabel">Buff</span>
                         <span className="lineValue">{r.buff ?? '—'}</span>
