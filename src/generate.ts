@@ -184,6 +184,33 @@ export function spriteFallbacks(p: Pokemon, shiny: boolean): string[] {
   return urls;
 }
 
+export function spriteColorCandidates(p: Pokemon, shiny: boolean): string[] {
+  const folders: Array<[string, 'png']> = shiny
+    ? [
+        ['dex-shiny', 'png'],
+        ['home-shiny', 'png'],
+        ['gen5-shiny', 'png'],
+      ]
+    : [
+        ['dex', 'png'],
+        ['gen5', 'png'],
+      ];
+
+  const candidates = uniq([
+    ...spriteIdVariants(p.spriteId),
+    ...spriteIdVariants(p.baseSpriteId),
+  ]).slice(0, 4);
+
+  const urls: string[] = [];
+  for (const id of candidates) {
+    for (const [folder, ext] of folders) {
+      urls.push(`https://play.pokemonshowdown.com/sprites/${folder}/${id}.${ext}`);
+    }
+  }
+
+  return urls;
+}
+
 export function generate(pokemon: Pokemon[], options: Options): Generated[] {
   let pool = pokemon.slice();
 

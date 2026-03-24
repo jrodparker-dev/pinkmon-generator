@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
 import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
-import { generate, spriteFallbacks } from './generate';
+import { generate, spriteColorCandidates, spriteFallbacks } from './generate';
 import { uniq } from './utils';
-import { getAverageColor, pickBestBall, type PokeballAsset } from './pokeballMatcher';
+import { corsSafeImageUrl, getColorProfile, mergeColorProfiles, pickBestBallForProfile, type ImageColorProfile, type PokeballAsset } from './pokeballMatcher';
 
 const STAT_KEYS: { key: StatKey; label: string }[] = [
   { key: 'hp', label: 'HP' },
@@ -231,11 +231,15 @@ export default function App() {
           url: `${base}pokeballs/${name}`,
         }));
 
-        const withColors = await Promise.all(entries.map(async (entry) => ({
-          name: entry.name,
-          url: entry.url,
-          color: await getAverageColor(entry.url),
-        })));
+        const withColors = await Promise.all(entries.map(async (entry) => {
+          const profile = await getColorProfile(entry.url);
+          return {
+            name: entry.name,
+            url: entry.url,
+            profile,
+            color: profile.average,
+          };
+        }));
 
         if (!cancelled) setPokeballs(withColors);
       } catch {
@@ -262,19 +266,22 @@ export default function App() {
       const matches: Record<string, PokeballAsset | null> = {};
 
       for (const r of results) {
-        const spriteCandidates = spriteFallbacks(r.pokemon, r.isShiny);
-        let spriteColor = null;
+        const spriteCandidates = spriteColorCandidates(r.pokemon, r.isShiny);
+        const profilePool: ImageColorProfile[] = [];
 
-        for (const url of spriteCandidates) {
-          try {
-            spriteColor = await getAverageColor(url);
-            break;
-          } catch {
-            // try next fallback URL
-          }
-        }
+        await Promise.all(
+          spriteCandidates.map(async (url) => {
+            try {
+              const profile = await getColorProfile(corsSafeImageUrl(url));
+              profilePool.push(profile);
+            } catch {
+              // ignore missing sprite/color candidates
+            }
+          })
+        );
 
-        matches[r.key] = spriteColor ? pickBestBall(spriteColor, pokeballs) : null;
+        const pooledProfile = mergeColorProfiles(profilePool);
+        matches[r.key] = pooledProfile ? pickBestBallForProfile(pooledProfile, pokeballs) : null;
       }
 
       if (!cancelled) setMatchedPokeballs(matches);
@@ -691,6 +698,12 @@ export default function App() {
 
                     {r.revealed && r.isShiny && <div className="cornerTag shiny">Shiny ✨</div>}
                     {r.revealed && isFusion && <div className="cornerTag fusionTag">Fusion 💜</div>}
+                    {r.revealed && opts.pokeballPicker && matchedBall && (
+                      <div className="cornerTag cornerTagRight ballDebug">
+                        <img className="ballDebugIcon" src={matchedBall.url} alt={`${matchedBall.name} match`} />
+                        <span>{matchedBall.name.replace(/\.(png|gif|jpg|jpeg|webp)$/i, '')}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="meta">
