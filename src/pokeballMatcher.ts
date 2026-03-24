@@ -245,3 +245,56 @@ export function pickBestBallForProfile(profile: ImageColorProfile, balls: Pokeba
 
   return best;
 }
+
+function buildMixedPalette(colors: Rgb[]): Rgb[] {
+  const out = colors.slice();
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      out.push({
+        r: Math.round((colors[i].r + colors[j].r) / 2),
+        g: Math.round((colors[i].g + colors[j].g) / 2),
+        b: Math.round((colors[i].b + colors[j].b) / 2),
+      });
+    }
+  }
+  return out;
+}
+
+function scoreBallAgainstProfile(sprite: ImageColorProfile, ball: PokeballAsset): number {
+  const profile = ball.profile;
+  if (!profile) return distance(sprite.chroma, ball.color);
+
+  const spriteColors = buildMixedPalette(sprite.palette.slice(0, 4));
+  const ballColors = buildMixedPalette(profile.palette.slice(0, 4));
+
+  let bestColorDistance = Infinity;
+  for (const a of spriteColors) {
+    for (const b of ballColors) {
+      const d = distance(a, b);
+      if (d < bestColorDistance) bestColorDistance = d;
+    }
+  }
+
+  const bwMajority = Math.max(sprite.blackRatio, sprite.whiteRatio) > 0.5;
+  const bwWeight = bwMajority ? 220 : 90;
+  const bwDiff = Math.abs(sprite.blackRatio - profile.blackRatio) + Math.abs(sprite.whiteRatio - profile.whiteRatio);
+
+  return bestColorDistance + bwDiff * bwWeight;
+}
+
+export function pickBestBallForProfile(profile: ImageColorProfile, balls: PokeballAsset[]): PokeballAsset | null {
+  if (!balls.length) return null;
+
+  let best = balls[0];
+  let bestScore = scoreBallAgainstProfile(profile, best);
+
+  for (let i = 1; i < balls.length; i++) {
+    const score = scoreBallAgainstProfile(profile, balls[i]);
+    if (score < bestScore) {
+      best = balls[i];
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
