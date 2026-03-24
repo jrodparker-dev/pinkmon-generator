@@ -36,6 +36,15 @@ export type AttackerPref = 'any' | 'physical' | 'special';
 export type ShinyOdds = 4096 | 2048 | 512 | 128;
 
 export type AbilityMode = 'off' | 'species' | 'random';
+export type BuffMode =
+  | 'off'
+  | 'custom-move'
+  | 'chosen-ability'
+  | 'plus-one-stat'
+  | 'plus-two-stats'
+  | 'new-typing'
+  | 'double-lowest-stat'
+  | 'match-highest-stat';
 
 export type StatMode = 'min' | 'max';
 
@@ -66,7 +75,7 @@ export type Options = {
 
   // Extras
   abilityMode: AbilityMode;
-  includeBuff: boolean;
+  buffMode: BuffMode;
   fusion: boolean;
   mystery: boolean;
 
@@ -83,6 +92,8 @@ export type Generated = {
 
   ability?: string;
   buff?: string;
+  displayStats?: BaseStats;
+  buffedStatKeys?: StatKey[];
   fusionParents?: [Pokemon, Pokemon];
   isFusion?: boolean;
   revealed?: boolean; // for mystery
