@@ -3,6 +3,7 @@ import { useDex } from './useDex';
 import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
+import { getAverageColor, pickBestBall, type PokeballAsset } from './pokeballMatcher';
 
 const STAT_KEYS: { key: StatKey; label: string }[] = [
   { key: 'hp', label: 'HP' },
@@ -40,6 +41,7 @@ const DEFAULTS: Options = {
   plusTwoAmounts: [10, 15, 20],
   fusion: false,
   mystery: false,
+  pokeballPicker: false,
 
   shinyOdds: 512,
 };
@@ -156,6 +158,8 @@ export default function App() {
   const [results, setResults] = useState<Generated[]>([]);
   const [cardSkins, setCardSkins] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pokeballs, setPokeballs] = useState<PokeballAsset[]>([]);
+  const [matchedPokeballs, setMatchedPokeballs] = useState<Record<string, PokeballAsset | null>>({});
 
   const canGenerate = !loading && !error && pokemon.length > 0;
 
@@ -204,7 +208,7 @@ export default function App() {
 
   function onGenerate() {
     const out = generate(pokemon, opts);
-    setResults(out);
+    setResults(out.map((result) => ({ ...result, revealed: opts.pokeballPicker ? false : result.revealed })));
 
     // shuffle pastel skins each time you generate
     const palette = shuffle(PASTEL_BACKGROUNDS);
@@ -212,6 +216,76 @@ export default function App() {
     for (let i = 0; i < out.length; i++) skins.push(palette[i % palette.length]);
     setCardSkins(skins);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPokeballs() {
+      try {
+        const base = import.meta.env.BASE_URL;
+        const res = await fetch(`${base}pokeballs/manifest.json`);
+        if (!res.ok) throw new Error('pokeball manifest missing');
+        const fileNames: string[] = await res.json();
+        const entries = fileNames.filter(Boolean).map((name) => ({
+          name,
+          url: `${base}pokeballs/${name}`,
+        }));
+
+        const withColors = await Promise.all(entries.map(async (entry) => ({
+          name: entry.name,
+          url: entry.url,
+          color: await getAverageColor(entry.url),
+        })));
+
+        if (!cancelled) setPokeballs(withColors);
+      } catch {
+        if (!cancelled) setPokeballs([]);
+      }
+    }
+
+    loadPokeballs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!opts.pokeballPicker || !results.length || !pokeballs.length) {
+      setMatchedPokeballs({});
+      return;
+    }
+
+    let cancelled = false;
+
+    async function matchPokeballs() {
+      const matches: Record<string, PokeballAsset | null> = {};
+
+      for (const r of results) {
+        const spriteCandidates = spriteFallbacks(r.pokemon, r.isShiny);
+        let spriteColor = null;
+
+        for (const url of spriteCandidates) {
+          try {
+            spriteColor = await getAverageColor(url);
+            break;
+          } catch {
+            // try next fallback URL
+          }
+        }
+
+        matches[r.key] = spriteColor ? pickBestBall(spriteColor, pokeballs) : null;
+      }
+
+      if (!cancelled) setMatchedPokeballs(matches);
+    }
+
+    matchPokeballs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [opts.pokeballPicker, pokeballs, results]);
 
   function reveal(key: string) {
     setResults(rs => rs.map(r => (r.key === key ? { ...r, revealed: true } : r)));
@@ -279,12 +353,14 @@ export default function App() {
               <button className="btn btnGhost modalClose" onClick={() => setSettingsOpen(false)}>Close</button>
             </div>
             <div className="modeGrid">
-              {Array.from({ length: 6 }, (_, i) => (
-                <label key={i} className="check modeCheck">
-                  <input type="checkbox" />
-                  <span>Placeholder</span>
-                </label>
-              ))}
+              <label className="check modeCheck">
+                <input
+                  type="checkbox"
+                  checked={opts.pokeballPicker}
+                  onChange={(e) => setOpts((o) => ({ ...o, pokeballPicker: e.target.checked }))}
+                />
+                <span>Pokeball Picker</span>
+              </label>
             </div>
           </div>
         </div>
@@ -579,11 +655,14 @@ export default function App() {
             {results.map((r, i) => {
               const p = r.pokemon;
               const isFusion = Boolean(r.isFusion);
+              const matchedBall = matchedPokeballs[r.key];
+              const hiddenByMode = opts.pokeballPicker && !r.revealed;
+              const showReveal = !r.revealed;
 
               return (
                 <div key={r.key} className={isFusion ? 'resultCard fusion' : 'resultCard'} style={{ background: cardSkins[i] ?? PASTEL_BACKGROUNDS[i % PASTEL_BACKGROUNDS.length] }}>
                   <div className="spriteWrap">
-                    {r.revealed ? (
+                    {!hiddenByMode && r.revealed ? (
                       isFusion ? (
                         r.fusionParents ? (
                           <div className="fusionSpriteRow" aria-label={`Fusion of ${r.fusionParents[0].name} and ${r.fusionParents[1].name}`}>
@@ -597,11 +676,17 @@ export default function App() {
                       ) : (
                         <SpriteImg p={p} shiny={r.isShiny} className="sprite" />
                       )
-                    ) : (
+                    ) : showReveal ? (
                       <button className="mysteryCover" onClick={() => reveal(r.key)} title="Click to reveal!">
-                        <span className="mysteryBall">◒</span>
+                        {opts.pokeballPicker && matchedBall ? (
+                          <img className="pokeballOverlay" src={matchedBall.url} alt={`${matchedBall.name} cover`} />
+                        ) : (
+                          <span className="mysteryBall">◒</span>
+                        )}
                         <span>Reveal</span>
                       </button>
+                    ) : (
+                      <SpriteImg p={p} shiny={r.isShiny} className="sprite" />
                     )}
 
                     {r.revealed && r.isShiny && <div className="cornerTag shiny">Shiny ✨</div>}

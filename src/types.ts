@@ -80,6 +80,7 @@ export type Options = {
   plusTwoAmounts: number[];
   fusion: boolean;
   mystery: boolean;
+  pokeballPicker: boolean;
 
   shinyOdds: ShinyOdds;
 };

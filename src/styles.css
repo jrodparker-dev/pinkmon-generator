@@ -556,6 +556,12 @@ h1{margin:0; font-size:22px; letter-spacing:0.2px;}
   cursor:pointer;
 }
 .mysteryBall{font-size:36px; opacity:0.9;}
+.pokeballOverlay{
+  width:86px;
+  height:86px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,0.35));
+}
 
 .meta{padding:12px;}
 .nameRow{display:flex; align-items:baseline; justify-content:space-between; gap:10px;}
