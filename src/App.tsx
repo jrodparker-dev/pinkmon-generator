@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
+import type { BuffMode, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 
@@ -34,7 +34,7 @@ const DEFAULTS: Options = {
   randomTyping: false,
 
   abilityMode: 'species',
-  includeBuff: false,
+  buffMode: 'off',
   fusion: false,
   mystery: false,
 
@@ -203,16 +203,17 @@ export default function App() {
           {loading && <div className="hint">Loading Showdown dex…</div>}
           {error && <div className="error">Dex load failed: {error}</div>}
 
-          <div className="row">
+          <div className="row topRow">
             <label className="field">
               <span>How many?</span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={opts.count}
-                onChange={(e) => setOpts(o => ({ ...o, count: Math.max(1, Math.min(12, Number(e.target.value) || 6)) }))}
-              />
+              <select
+                value={String(opts.count)}
+                onChange={(e) => setOpts(o => ({ ...o, count: Number(e.target.value) }))}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
             </label>
 
             <label className="field">
@@ -242,7 +243,7 @@ export default function App() {
             <div className="setupCol">
               <DropdownMulti
                 title="Generations"
-                subtitle="Filter by National Dex generation"
+                subtitle=""
                 selectedCount={opts.genFilter.length}
               >
                 <div className="ddTools">
@@ -286,7 +287,7 @@ export default function App() {
             <div className="setupCol">
               <DropdownMulti
                 title="Forms"
-                subtitle="What formes can appear"
+                subtitle=""
                 selectedCount={[opts.includeRegional, opts.includeMega, opts.includeGmax].filter(Boolean).length}
               >
                 <label className="check"><input type="checkbox" checked={opts.includeRegional} onChange={(e) => setOpts(o => ({ ...o, includeRegional: e.target.checked }))} /><span>Regional (Alola/Galar/Hisui/Paldea)</span></label>
@@ -296,7 +297,7 @@ export default function App() {
 
               <DropdownMulti
                 title="Legends"
-                subtitle="Choose categories and how to use them"
+                subtitle=""
                 selectedCount={opts.legendCats.length}
                 rightChip={<span className="miniPill">{opts.legendMode === 'include' ? 'Include' : opts.legendMode === 'exclude' ? 'Exclude' : 'Limit to'}</span>}
               >
@@ -358,17 +359,30 @@ export default function App() {
                 <option value="random">Random ability</option>
               </select>
             </label>
-            <label className="check">
-              <input type="checkbox" checked={opts.includeBuff} onChange={(e) => setOpts(o => ({ ...o, includeBuff: e.target.checked }))} />
-              <span>Include buff</span>
+            <label className="field">
+              <span className="label">Buff</span>
+              <select
+                className="select"
+                value={opts.buffMode}
+                onChange={(e) => setOpts(o => ({ ...o, buffMode: e.target.value as BuffMode }))}
+              >
+                <option value="off">Off</option>
+                <option value="custom-move">Custom Move</option>
+                <option value="chosen-ability">Chosen Ability</option>
+                <option value="plus-one-stat">(+10/15/20/25/30/35/40) to one stat</option>
+                <option value="plus-two-stats">(+10/15/20) to two stats</option>
+                <option value="new-typing">New Typing</option>
+                <option value="double-lowest-stat">Double its lowest stat</option>
+                <option value="match-highest-stat">Change 1 stat to match its highest stat</option>
+              </select>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.randomTyping} onChange={(e) => setOpts(o => ({ ...o, randomTyping: e.target.checked }))} />
-              <span>Random typing (single or dual)</span>
+              <span>Random typing</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.fusion} onChange={(e) => setOpts(o => ({ ...o, fusion: e.target.checked }))} />
-              <span>Fusion (placeholder)</span>
+              <span>Fusion</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.mystery} onChange={(e) => setOpts(o => ({ ...o, mystery: e.target.checked }))} />
@@ -485,7 +499,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {r.revealed && opts.includeBuff && (
+                    {r.revealed && opts.buffMode !== 'off' && (
                       <div className="line">
                         <span className="lineLabel">Buff</span>
                         <span className="lineValue">{r.buff ?? '—'}</span>
@@ -497,7 +511,9 @@ export default function App() {
                         {STAT_KEYS.map(({ key, label }) => (
                           <div key={key} className="statChip">
                             <span className="statLabel">{label}</span>
-                            <span className="statVal">{(p.baseStats as any)[key]}</span>
+                            <span className={r.buffedStatKeys?.includes(key) ? 'statVal statValBuffed' : 'statVal'}>
+                              {(r.displayStats ?? p.baseStats)?.[key]}
+                            </span>
                           </div>
                         ))}
                       </div>
