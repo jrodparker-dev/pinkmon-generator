@@ -193,7 +193,6 @@ export function spriteColorCandidates(p: Pokemon, shiny: boolean): string[] {
       ]
     : [
         ['dex', 'png'],
-        ['home-centered', 'png'],
         ['gen5', 'png'],
       ];
 

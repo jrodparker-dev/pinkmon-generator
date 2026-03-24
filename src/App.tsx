@@ -3,7 +3,7 @@ import { useDex } from './useDex';
 import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteColorCandidates, spriteFallbacks } from './generate';
 import { uniq } from './utils';
-import { averageRgb, corsSafeImageUrl, getAverageColor, pickBestBall, type PokeballAsset, type Rgb } from './pokeballMatcher';
+import { corsSafeImageUrl, getColorProfile, mergeColorProfiles, pickBestBallForProfile, type ImageColorProfile, type PokeballAsset } from './pokeballMatcher';
 
 const STAT_KEYS: { key: StatKey; label: string }[] = [
   { key: 'hp', label: 'HP' },
@@ -231,11 +231,15 @@ export default function App() {
           url: `${base}pokeballs/${name}`,
         }));
 
-        const withColors = await Promise.all(entries.map(async (entry) => ({
-          name: entry.name,
-          url: entry.url,
-          color: await getAverageColor(entry.url),
-        })));
+        const withColors = await Promise.all(entries.map(async (entry) => {
+          const profile = await getColorProfile(entry.url);
+          return {
+            name: entry.name,
+            url: entry.url,
+            profile,
+            color: profile.average,
+          };
+        }));
 
         if (!cancelled) setPokeballs(withColors);
       } catch {
@@ -263,21 +267,21 @@ export default function App() {
 
       for (const r of results) {
         const spriteCandidates = spriteColorCandidates(r.pokemon, r.isShiny);
-        const colorPool: Rgb[] = [];
+        const profilePool: ImageColorProfile[] = [];
 
         await Promise.all(
           spriteCandidates.map(async (url) => {
             try {
-              const color = await getAverageColor(corsSafeImageUrl(url));
-              colorPool.push(color);
+              const profile = await getColorProfile(corsSafeImageUrl(url));
+              profilePool.push(profile);
             } catch {
               // ignore missing sprite/color candidates
             }
           })
         );
 
-        const pooledColor = averageRgb(colorPool);
-        matches[r.key] = pooledColor ? pickBestBall(pooledColor, pokeballs) : null;
+        const pooledProfile = mergeColorProfiles(profilePool);
+        matches[r.key] = pooledProfile ? pickBestBallForProfile(pooledProfile, pokeballs) : null;
       }
 
       if (!cancelled) setMatchedPokeballs(matches);
