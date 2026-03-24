@@ -75,7 +75,7 @@ export type Options = {
 
   // Extras
   abilityMode: AbilityMode;
-  includeBuff: boolean;
+  buffMode: BuffMode;
   fusion: boolean;
   mystery: boolean;
 
