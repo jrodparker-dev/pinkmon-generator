@@ -3,7 +3,7 @@ import { useDex } from './useDex';
 import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteColorCandidates, spriteFallbacks } from './generate';
 import { uniq } from './utils';
-import { averageRgb, getAverageColor, pickBestBall, type PokeballAsset, type Rgb } from './pokeballMatcher';
+import { averageRgb, corsSafeImageUrl, getAverageColor, pickBestBall, type PokeballAsset, type Rgb } from './pokeballMatcher';
 
 const STAT_KEYS: { key: StatKey; label: string }[] = [
   { key: 'hp', label: 'HP' },
@@ -268,7 +268,7 @@ export default function App() {
         await Promise.all(
           spriteCandidates.map(async (url) => {
             try {
-              const color = await getAverageColor(url);
+              const color = await getAverageColor(corsSafeImageUrl(url));
               colorPool.push(color);
             } catch {
               // ignore missing sprite/color candidates
@@ -694,6 +694,12 @@ export default function App() {
 
                     {r.revealed && r.isShiny && <div className="cornerTag shiny">Shiny ✨</div>}
                     {r.revealed && isFusion && <div className="cornerTag fusionTag">Fusion 💜</div>}
+                    {r.revealed && opts.pokeballPicker && matchedBall && (
+                      <div className="cornerTag cornerTagRight ballDebug">
+                        <img className="ballDebugIcon" src={matchedBall.url} alt={`${matchedBall.name} match`} />
+                        <span>{matchedBall.name.replace(/\.(png|gif|jpg|jpeg|webp)$/i, '')}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="meta">
