@@ -54,6 +54,32 @@ function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
 }
 
+const TYPE_COLORS: Record<string, string> = {
+  normal: '#A8A77A',
+  fire: '#EE8130',
+  water: '#6390F0',
+  electric: '#F7D02C',
+  grass: '#7AC74C',
+  ice: '#96D9D6',
+  fighting: '#C22E28',
+  poison: '#A33EA1',
+  ground: '#E2BF65',
+  flying: '#A98FF3',
+  psychic: '#F95587',
+  bug: '#A6B91A',
+  rock: '#B6A136',
+  ghost: '#735797',
+  dragon: '#6F35FC',
+  dark: '#705746',
+  steel: '#B7B7CE',
+  fairy: '#D685AD',
+};
+
+function TypeBadge({ type }: { type: string }) {
+  const tone = TYPE_COLORS[type.toLowerCase()] ?? '#B8A0D8';
+  return <span className="badge typeBadge" style={{ ['--type-color' as any]: tone }}>{type}</span>;
+}
+
 function DropdownMulti({
   title,
   subtitle,
@@ -263,7 +289,7 @@ export default function App() {
 
               <DropdownMulti
                 title="Types"
-                subtitle="Shows Pokémon matching any selected type"
+                subtitle=""
                 selectedCount={opts.typeFilter.length}
               >
                 <div className="ddTools">
@@ -488,7 +514,7 @@ export default function App() {
 
                     {r.revealed && (
                       <div className="typeRow">
-                        {(r.displayTypes ?? p.types).map((t) => <Badge key={t}>{t}</Badge>)}
+                        {(r.displayTypes ?? p.types).map((t) => <TypeBadge key={t} type={t} />)}
                       </div>
                     )}
 

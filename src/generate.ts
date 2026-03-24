@@ -1,4 +1,4 @@
-import type { BaseStats, Generated, Options, Pokemon, StatKey } from './types';
+import type { BaseStats, BuffMode, Generated, Options, Pokemon, StatKey } from './types';
 import {
   attackerMatches,
   genFromNum,
@@ -34,7 +34,7 @@ function fusionStatsFromParents(a: Pokemon, b: Pokemon): BaseStats | undefined {
   return stats;
 }
 
-function applyBuff(mode: Options['buffMode'], mon: Pokemon, abilityPool: string[]): Pick<Generated, 'buff' | 'displayStats' | 'buffedStatKeys' | 'ability' | 'displayTypes'> {
+function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Generated, 'buff' | 'displayStats' | 'buffedStatKeys' | 'ability' | 'displayTypes'> {
   const displayStats = cloneStats(mon.baseStats);
 
   if (mode === 'off') {
@@ -59,7 +59,7 @@ function applyBuff(mode: Options['buffMode'], mon: Pokemon, abilityPool: string[
   }
 
   if (!displayStats) {
-    const labels: Record<Exclude<Options['buffMode'], 'off'>, string> = {
+    const labels: Record<Exclude<BuffMode, 'off'>, string> = {
       'custom-move': 'Custom Move',
       'chosen-ability': 'Chosen Ability',
       'plus-one-stat': '+10 to one stat',
@@ -101,6 +101,16 @@ function applyBuff(mode: Options['buffMode'], mon: Pokemon, abilityPool: string[
   displayStats[target] = max;
   return { buff: 'Change 1 stat to match its highest stat', displayStats, buffedStatKeys: [target] };
 }
+
+const RANDOM_BUFF_MODES: Exclude<BuffMode, 'off'>[] = [
+  'custom-move',
+  'chosen-ability',
+  'plus-one-stat',
+  'plus-two-stats',
+  'new-typing',
+  'double-lowest-stat',
+  'match-highest-stat',
+];
 
 function isAllowedByGens(p: Pokemon, allowed: number[]): boolean {
   if (!allowed.length) return true;
@@ -252,8 +262,9 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       ability = globalAbilityPool.length ? randomOf(globalAbilityPool) : undefined;
     }
 
-    const buffResult = applyBuff(options.buffMode, p, globalAbilityPool);
-    if (options.buffMode === 'new-typing' && allTypes.length) {
+    const rolledBuff = options.includeBuff ? randomOf(RANDOM_BUFF_MODES) : 'off';
+    const buffResult = applyBuff(rolledBuff, p, globalAbilityPool);
+    if (rolledBuff === 'new-typing' && allTypes.length) {
       buffResult.displayTypes = pickN(allTypes, Math.random() < 0.5 ? 1 : 2);
     }
     if (!displayTypes && buffResult.displayTypes) {
@@ -305,8 +316,9 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
       : (Math.random() < 0.5
           ? (parentAbilities.length ? randomOf(parentAbilities) : (randomAbilityPool.length ? randomOf(randomAbilityPool) : undefined))
           : (randomAbilityPool.length ? randomOf(randomAbilityPool) : (parentAbilities.length ? randomOf(parentAbilities) : undefined)));
-    const fusionBuffResult = applyBuff(options.buffMode, fusion, globalAbilityPool);
-    if (options.buffMode === 'new-typing' && allTypes.length) {
+    const fusionBuffMode = options.includeBuff ? randomOf(RANDOM_BUFF_MODES) : 'off';
+    const fusionBuffResult = applyBuff(fusionBuffMode, fusion, globalAbilityPool);
+    if (fusionBuffMode === 'new-typing' && allTypes.length) {
       fusionBuffResult.displayTypes = pickN(allTypes, Math.random() < 0.5 ? 1 : 2);
     }
 
