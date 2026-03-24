@@ -13,6 +13,19 @@ import {
 
 
 const STAT_KEYS: StatKey[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+type BuffMode =
+  | 'off'
+  | 'custom-move'
+  | 'chosen-ability'
+  | 'plus-one-stat'
+  | 'plus-two-stats'
+  | 'new-typing'
+  | 'double-lowest-stat'
+  | 'match-highest-stat';
+
+function cloneStats(stats?: BaseStats): BaseStats | undefined {
+  return stats ? { ...stats } : undefined;
+}
 
 function cloneStats(stats?: BaseStats): BaseStats | undefined {
   return stats ? { ...stats } : undefined;
