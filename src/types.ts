@@ -83,6 +83,8 @@ export type Generated = {
 
   ability?: string;
   buff?: string;
+  displayStats?: BaseStats;
+  buffedStatKeys?: StatKey[];
   fusionParents?: [Pokemon, Pokemon];
   isFusion?: boolean;
   revealed?: boolean; // for mystery
