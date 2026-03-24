@@ -217,6 +217,11 @@ export function corsSafeImageUrl(url: string): string {
   return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
 }
 
+export function corsSafeImageUrl(url: string): string {
+  const noProto = url.replace(/^https?:\/\//, '');
+  return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
+}
+
 export function pickBestBall(target: Rgb, balls: PokeballAsset[]): PokeballAsset | null {
   if (!balls.length) return null;
 
