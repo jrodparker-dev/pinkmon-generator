@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
+import type { BuffMode, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 
@@ -34,7 +34,7 @@ const DEFAULTS: Options = {
   randomTyping: false,
 
   abilityMode: 'species',
-  includeBuff: false,
+  buffMode: 'off',
   fusion: false,
   mystery: false,
 
@@ -385,9 +385,22 @@ export default function App() {
                 <option value="random">Random ability</option>
               </select>
             </label>
-            <label className="check">
-              <input type="checkbox" checked={opts.includeBuff} onChange={(e) => setOpts(o => ({ ...o, includeBuff: e.target.checked }))} />
-              <span>Include buff</span>
+            <label className="field">
+              <span className="label">Buff</span>
+              <select
+                className="select"
+                value={opts.buffMode}
+                onChange={(e) => setOpts(o => ({ ...o, buffMode: e.target.value as BuffMode }))}
+              >
+                <option value="off">Off</option>
+                <option value="custom-move">Custom Move</option>
+                <option value="chosen-ability">Chosen Ability</option>
+                <option value="plus-one-stat">(+10/15/20/25/30/35/40) to one stat</option>
+                <option value="plus-two-stats">(+10/15/20) to two stats</option>
+                <option value="new-typing">New Typing</option>
+                <option value="double-lowest-stat">Double its lowest stat</option>
+                <option value="match-highest-stat">Change 1 stat to match its highest stat</option>
+              </select>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.randomTyping} onChange={(e) => setOpts(o => ({ ...o, randomTyping: e.target.checked }))} />
@@ -512,7 +525,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {r.revealed && opts.includeBuff && (
+                    {r.revealed && opts.buffMode !== 'off' && (
                       <div className="line">
                         <span className="lineLabel">Buff</span>
                         <span className="lineValue">{r.buff ?? '—'}</span>
