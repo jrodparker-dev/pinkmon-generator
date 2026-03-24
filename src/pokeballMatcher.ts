@@ -109,25 +109,6 @@ function analyzeImageData(data: Uint8ClampedArray): ImageColorProfile {
   };
 }
 
-export function averageRgb(colors: Rgb[]): Rgb | null {
-  if (!colors.length) return null;
-  let r = 0;
-  let g = 0;
-  let b = 0;
-
-  for (const color of colors) {
-    r += color.r;
-    g += color.g;
-    b += color.b;
-  }
-
-  return {
-    r: Math.round(r / colors.length),
-    g: Math.round(g / colors.length),
-    b: Math.round(b / colors.length),
-  };
-}
-
 export function mergeColorProfiles(profiles: ImageColorProfile[]): ImageColorProfile | null {
   if (!profiles.length) return null;
 
@@ -207,32 +188,58 @@ export async function getColorProfile(url: string): Promise<ImageColorProfile> {
   return analyzeImageData(imageData.data);
 }
 
-export async function getAverageColor(url: string): Promise<Rgb> {
-  const profile = await getColorProfile(url);
-  return profile.average;
-}
-
-export function corsSafeImageUrl(url: string): string {
+export const corsSafeImageUrl = (url: string): string => {
   const noProto = url.replace(/^https?:\/\//, '');
   return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
+};
+
+function buildMixedPalette(colors: Rgb[]): Rgb[] {
+  const out = colors.slice();
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      out.push({
+        r: Math.round((colors[i].r + colors[j].r) / 2),
+        g: Math.round((colors[i].g + colors[j].g) / 2),
+        b: Math.round((colors[i].b + colors[j].b) / 2),
+      });
+    }
+  }
+  return out;
 }
 
-export function corsSafeImageUrl(url: string): string {
-  const noProto = url.replace(/^https?:\/\//, '');
-  return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
+function scoreBallAgainstProfile(sprite: ImageColorProfile, ball: PokeballAsset): number {
+  const profile = ball.profile;
+  if (!profile) return distance(sprite.chroma, ball.color);
+
+  const spriteColors = buildMixedPalette(sprite.palette.slice(0, 4));
+  const ballColors = buildMixedPalette(profile.palette.slice(0, 4));
+
+  let bestColorDistance = Infinity;
+  for (const a of spriteColors) {
+    for (const b of ballColors) {
+      const d = distance(a, b);
+      if (d < bestColorDistance) bestColorDistance = d;
+    }
+  }
+
+  const bwMajority = Math.max(sprite.blackRatio, sprite.whiteRatio) > 0.5;
+  const bwWeight = bwMajority ? 220 : 90;
+  const bwDiff = Math.abs(sprite.blackRatio - profile.blackRatio) + Math.abs(sprite.whiteRatio - profile.whiteRatio);
+
+  return bestColorDistance + bwDiff * bwWeight;
 }
 
-export function pickBestBall(target: Rgb, balls: PokeballAsset[]): PokeballAsset | null {
+export function pickBestBallForProfile(profile: ImageColorProfile, balls: PokeballAsset[]): PokeballAsset | null {
   if (!balls.length) return null;
 
   let best = balls[0];
-  let bestDistance = distance(target, best.color);
+  let bestScore = scoreBallAgainstProfile(profile, best);
 
   for (let i = 1; i < balls.length; i++) {
-    const score = distance(target, balls[i].color);
-    if (score < bestDistance) {
+    const score = scoreBallAgainstProfile(profile, balls[i]);
+    if (score < bestScore) {
       best = balls[i];
-      bestDistance = score;
+      bestScore = score;
     }
   }
 
