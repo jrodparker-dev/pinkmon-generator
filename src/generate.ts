@@ -23,11 +23,7 @@ type BuffMode =
   | 'double-lowest-stat'
   | 'match-highest-stat';
 
-function cloneStats(stats?: BaseStats): BaseStats | undefined {
-  return stats ? { ...stats } : undefined;
-}
-
-function cloneStats(stats?: BaseStats): BaseStats | undefined {
+function copyBaseStats(stats?: BaseStats): BaseStats | undefined {
   return stats ? { ...stats } : undefined;
 }
 
@@ -48,7 +44,7 @@ function fusionStatsFromParents(a: Pokemon, b: Pokemon): BaseStats | undefined {
 }
 
 function applyBuff(mode: BuffMode, mon: Pokemon, abilityPool: string[]): Pick<Generated, 'buff' | 'displayStats' | 'buffedStatKeys' | 'ability' | 'displayTypes'> {
-  const displayStats = cloneStats(mon.baseStats);
+  const displayStats = copyBaseStats(mon.baseStats);
 
   if (mode === 'off') {
     return { buff: undefined, displayStats, buffedStatKeys: [] };
