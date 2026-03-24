@@ -54,6 +54,32 @@ function Badge({ children }: { children: React.ReactNode }) {
   return <span className="badge">{children}</span>;
 }
 
+const TYPE_COLORS: Record<string, string> = {
+  normal: '#A8A77A',
+  fire: '#EE8130',
+  water: '#6390F0',
+  electric: '#F7D02C',
+  grass: '#7AC74C',
+  ice: '#96D9D6',
+  fighting: '#C22E28',
+  poison: '#A33EA1',
+  ground: '#E2BF65',
+  flying: '#A98FF3',
+  psychic: '#F95587',
+  bug: '#A6B91A',
+  rock: '#B6A136',
+  ghost: '#735797',
+  dragon: '#6F35FC',
+  dark: '#705746',
+  steel: '#B7B7CE',
+  fairy: '#D685AD',
+};
+
+function TypeBadge({ type }: { type: string }) {
+  const tone = TYPE_COLORS[type.toLowerCase()] ?? '#B8A0D8';
+  return <span className="badge typeBadge" style={{ ['--type-color' as any]: tone }}>{type}</span>;
+}
+
 function DropdownMulti({
   title,
   subtitle,
@@ -203,16 +229,17 @@ export default function App() {
           {loading && <div className="hint">Loading Showdown dex…</div>}
           {error && <div className="error">Dex load failed: {error}</div>}
 
-          <div className="row">
+          <div className="row topRow">
             <label className="field">
               <span>How many?</span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={opts.count}
-                onChange={(e) => setOpts(o => ({ ...o, count: Math.max(1, Math.min(12, Number(e.target.value) || 6)) }))}
-              />
+              <select
+                value={String(opts.count)}
+                onChange={(e) => setOpts(o => ({ ...o, count: Number(e.target.value) }))}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
             </label>
 
             <label className="field">
@@ -242,7 +269,7 @@ export default function App() {
             <div className="setupCol">
               <DropdownMulti
                 title="Generations"
-                subtitle="Filter by National Dex generation"
+                subtitle=""
                 selectedCount={opts.genFilter.length}
               >
                 <div className="ddTools">
@@ -262,7 +289,7 @@ export default function App() {
 
               <DropdownMulti
                 title="Types"
-                subtitle="Shows Pokémon matching any selected type"
+                subtitle=""
                 selectedCount={opts.typeFilter.length}
               >
                 <div className="ddTools">
@@ -286,7 +313,7 @@ export default function App() {
             <div className="setupCol">
               <DropdownMulti
                 title="Forms"
-                subtitle="What formes can appear"
+                subtitle=""
                 selectedCount={[opts.includeRegional, opts.includeMega, opts.includeGmax].filter(Boolean).length}
               >
                 <label className="check"><input type="checkbox" checked={opts.includeRegional} onChange={(e) => setOpts(o => ({ ...o, includeRegional: e.target.checked }))} /><span>Regional (Alola/Galar/Hisui/Paldea)</span></label>
@@ -296,7 +323,7 @@ export default function App() {
 
               <DropdownMulti
                 title="Legends"
-                subtitle="Choose categories and how to use them"
+                subtitle=""
                 selectedCount={opts.legendCats.length}
                 rightChip={<span className="miniPill">{opts.legendMode === 'include' ? 'Include' : opts.legendMode === 'exclude' ? 'Exclude' : 'Limit to'}</span>}
               >
@@ -364,11 +391,11 @@ export default function App() {
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.randomTyping} onChange={(e) => setOpts(o => ({ ...o, randomTyping: e.target.checked }))} />
-              <span>Random typing (single or dual)</span>
+              <span>Random typing</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.fusion} onChange={(e) => setOpts(o => ({ ...o, fusion: e.target.checked }))} />
-              <span>Fusion (placeholder)</span>
+              <span>Fusion</span>
             </label>
             <label className="check">
               <input type="checkbox" checked={opts.mystery} onChange={(e) => setOpts(o => ({ ...o, mystery: e.target.checked }))} />
@@ -474,7 +501,7 @@ export default function App() {
 
                     {r.revealed && (
                       <div className="typeRow">
-                        {(r.displayTypes ?? p.types).map((t) => <Badge key={t}>{t}</Badge>)}
+                        {(r.displayTypes ?? p.types).map((t) => <TypeBadge key={t} type={t} />)}
                       </div>
                     )}
 
@@ -497,7 +524,9 @@ export default function App() {
                         {STAT_KEYS.map(({ key, label }) => (
                           <div key={key} className="statChip">
                             <span className="statLabel">{label}</span>
-                            <span className="statVal">{(p.baseStats as any)[key]}</span>
+                            <span className={r.buffedStatKeys?.includes(key) ? 'statVal statValBuffed' : 'statVal'}>
+                              {(r.displayStats ?? p.baseStats)?.[key]}
+                            </span>
                           </div>
                         ))}
                       </div>
