@@ -1,12 +1,5 @@
 export type Rgb = { r: number; g: number; b: number };
 
-export type PokeballAsset = {
-  name: string;
-  url: string;
-  color: Rgb;
-  profile?: ImageColorProfile;
-};
-
 export type ImageColorProfile = {
   average: Rgb;
   chroma: Rgb;
@@ -15,6 +8,15 @@ export type ImageColorProfile = {
   palette: Rgb[];
   pixelCount: number;
 };
+
+export type PokeballAsset = {
+  name: string;
+  url: string;
+  color: Rgb;
+  profile?: ImageColorProfile;
+};
+
+const FALLBACK_GRAY: Rgb = { r: 127, g: 127, b: 127 };
 
 function distance(a: Rgb, b: Rgb): number {
   return Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
@@ -31,19 +33,33 @@ function saturation(c: Rgb): number {
 function quantize(c: Rgb): Rgb {
   const step = 32;
   return {
-    r: Math.round(c.r / step) * step,
-    g: Math.round(c.g / step) * step,
-    b: Math.round(c.b / step) * step,
+    r: Math.max(0, Math.min(255, Math.round(c.r / step) * step)),
+    g: Math.max(0, Math.min(255, Math.round(c.g / step) * step)),
+    b: Math.max(0, Math.min(255, Math.round(c.b / step) * step)),
   };
 }
 
-function averageOrFallback(sum: Rgb, count: number, fallback: Rgb): Rgb {
+function avg(sum: Rgb, count: number, fallback: Rgb): Rgb {
   if (!count) return fallback;
   return {
     r: Math.round(sum.r / count),
     g: Math.round(sum.g / count),
     b: Math.round(sum.b / count),
   };
+}
+
+function buildMixedPalette(colors: Rgb[]): Rgb[] {
+  const out = colors.slice();
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i + 1; j < colors.length; j++) {
+      out.push({
+        r: Math.round((colors[i].r + colors[j].r) / 2),
+        g: Math.round((colors[i].g + colors[j].g) / 2),
+        b: Math.round((colors[i].b + colors[j].b) / 2),
+      });
+    }
+  }
+  return out;
 }
 
 function analyzeImageData(data: Uint8ClampedArray): ImageColorProfile {
@@ -92,8 +108,8 @@ function analyzeImageData(data: Uint8ClampedArray): ImageColorProfile {
     else buckets.set(key, { color: q, count: 1 });
   }
 
-  const average = averageOrFallback(avgSum, pixelCount, { r: 127, g: 127, b: 127 });
-  const chroma = averageOrFallback(chromaSum, chromaCount, average);
+  const average = avg(avgSum, pixelCount, FALLBACK_GRAY);
+  const chroma = avg(chromaSum, chromaCount, average);
   const palette = Array.from(buckets.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, 4)
@@ -146,11 +162,11 @@ export function mergeColorProfiles(profiles: ImageColorProfile[]): ImageColorPro
     .map((x) => x.color);
 
   return {
-    average: averageOrFallback(avgSum, pixels, { r: 127, g: 127, b: 127 }),
-    chroma: averageOrFallback(chromaSum, pixels, { r: 127, g: 127, b: 127 }),
+    average: avg(avgSum, pixels, FALLBACK_GRAY),
+    chroma: avg(chromaSum, pixels, FALLBACK_GRAY),
     blackRatio: black / pixels,
     whiteRatio: white / pixels,
-    palette: topPalette.length ? topPalette : [{ r: 127, g: 127, b: 127 }],
+    palette: topPalette.length ? topPalette : [FALLBACK_GRAY],
     pixelCount: pixels,
   };
 }
@@ -173,17 +189,16 @@ export async function getColorProfile(url: string): Promise<ImageColorProfile> {
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     return {
-      average: { r: 127, g: 127, b: 127 },
-      chroma: { r: 127, g: 127, b: 127 },
+      average: FALLBACK_GRAY,
+      chroma: FALLBACK_GRAY,
       blackRatio: 0,
       whiteRatio: 0,
-      palette: [{ r: 127, g: 127, b: 127 }],
+      palette: [FALLBACK_GRAY],
       pixelCount: 1,
     };
   }
 
   ctx.drawImage(img, 0, 0);
-
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return analyzeImageData(imageData.data);
 }
@@ -193,26 +208,12 @@ export const corsSafeImageUrl = (url: string): string => {
   return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
 };
 
-function buildMixedPalette(colors: Rgb[]): Rgb[] {
-  const out = colors.slice();
-  for (let i = 0; i < colors.length; i++) {
-    for (let j = i + 1; j < colors.length; j++) {
-      out.push({
-        r: Math.round((colors[i].r + colors[j].r) / 2),
-        g: Math.round((colors[i].g + colors[j].g) / 2),
-        b: Math.round((colors[i].b + colors[j].b) / 2),
-      });
-    }
-  }
-  return out;
-}
-
 function scoreBallAgainstProfile(sprite: ImageColorProfile, ball: PokeballAsset): number {
-  const profile = ball.profile;
-  if (!profile) return distance(sprite.chroma, ball.color);
+  const ballProfile = ball.profile;
+  if (!ballProfile) return distance(sprite.chroma, ball.color);
 
   const spriteColors = buildMixedPalette(sprite.palette.slice(0, 4));
-  const ballColors = buildMixedPalette(profile.palette.slice(0, 4));
+  const ballColors = buildMixedPalette(ballProfile.palette.slice(0, 4));
 
   let bestColorDistance = Infinity;
   for (const a of spriteColors) {
@@ -224,60 +225,7 @@ function scoreBallAgainstProfile(sprite: ImageColorProfile, ball: PokeballAsset)
 
   const bwMajority = Math.max(sprite.blackRatio, sprite.whiteRatio) > 0.5;
   const bwWeight = bwMajority ? 220 : 90;
-  const bwDiff = Math.abs(sprite.blackRatio - profile.blackRatio) + Math.abs(sprite.whiteRatio - profile.whiteRatio);
-
-  return bestColorDistance + bwDiff * bwWeight;
-}
-
-export function pickBestBallForProfile(profile: ImageColorProfile, balls: PokeballAsset[]): PokeballAsset | null {
-  if (!balls.length) return null;
-
-  let best = balls[0];
-  let bestScore = scoreBallAgainstProfile(profile, best);
-
-  for (let i = 1; i < balls.length; i++) {
-    const score = scoreBallAgainstProfile(profile, balls[i]);
-    if (score < bestScore) {
-      best = balls[i];
-      bestScore = score;
-    }
-  }
-
-  return best;
-}
-
-function buildMixedPalette(colors: Rgb[]): Rgb[] {
-  const out = colors.slice();
-  for (let i = 0; i < colors.length; i++) {
-    for (let j = i + 1; j < colors.length; j++) {
-      out.push({
-        r: Math.round((colors[i].r + colors[j].r) / 2),
-        g: Math.round((colors[i].g + colors[j].g) / 2),
-        b: Math.round((colors[i].b + colors[j].b) / 2),
-      });
-    }
-  }
-  return out;
-}
-
-function scoreBallAgainstProfile(sprite: ImageColorProfile, ball: PokeballAsset): number {
-  const profile = ball.profile;
-  if (!profile) return distance(sprite.chroma, ball.color);
-
-  const spriteColors = buildMixedPalette(sprite.palette.slice(0, 4));
-  const ballColors = buildMixedPalette(profile.palette.slice(0, 4));
-
-  let bestColorDistance = Infinity;
-  for (const a of spriteColors) {
-    for (const b of ballColors) {
-      const d = distance(a, b);
-      if (d < bestColorDistance) bestColorDistance = d;
-    }
-  }
-
-  const bwMajority = Math.max(sprite.blackRatio, sprite.whiteRatio) > 0.5;
-  const bwWeight = bwMajority ? 220 : 90;
-  const bwDiff = Math.abs(sprite.blackRatio - profile.blackRatio) + Math.abs(sprite.whiteRatio - profile.whiteRatio);
+  const bwDiff = Math.abs(sprite.blackRatio - ballProfile.blackRatio) + Math.abs(sprite.whiteRatio - ballProfile.whiteRatio);
 
   return bestColorDistance + bwDiff * bwWeight;
 }
