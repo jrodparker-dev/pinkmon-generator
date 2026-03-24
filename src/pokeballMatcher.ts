@@ -34,6 +34,25 @@ function averageColorFromData(data: Uint8ClampedArray): Rgb {
   };
 }
 
+export function averageRgb(colors: Rgb[]): Rgb | null {
+  if (!colors.length) return null;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  for (const color of colors) {
+    r += color.r;
+    g += color.g;
+    b += color.b;
+  }
+
+  return {
+    r: Math.round(r / colors.length),
+    g: Math.round(g / colors.length),
+    b: Math.round(b / colors.length),
+  };
+}
+
 export async function getAverageColor(url: string): Promise<Rgb> {
   const img = new Image();
   img.crossOrigin = 'anonymous';
@@ -56,6 +75,11 @@ export async function getAverageColor(url: string): Promise<Rgb> {
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return averageColorFromData(imageData.data);
+}
+
+export function corsSafeImageUrl(url: string): string {
+  const noProto = url.replace(/^https?:\/\//, '');
+  return `https://images.weserv.nl/?url=${encodeURIComponent(noProto)}`;
 }
 
 export function pickBestBall(target: Rgb, balls: PokeballAsset[]): PokeballAsset | null {

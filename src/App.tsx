@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
 import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
-import { generate, spriteFallbacks } from './generate';
+import { generate, spriteColorCandidates, spriteFallbacks } from './generate';
 import { uniq } from './utils';
-import { getAverageColor, pickBestBall, type PokeballAsset } from './pokeballMatcher';
+import { averageRgb, corsSafeImageUrl, getAverageColor, pickBestBall, type PokeballAsset, type Rgb } from './pokeballMatcher';
 
 const STAT_KEYS: { key: StatKey; label: string }[] = [
   { key: 'hp', label: 'HP' },
@@ -262,19 +262,22 @@ export default function App() {
       const matches: Record<string, PokeballAsset | null> = {};
 
       for (const r of results) {
-        const spriteCandidates = spriteFallbacks(r.pokemon, r.isShiny);
-        let spriteColor = null;
+        const spriteCandidates = spriteColorCandidates(r.pokemon, r.isShiny);
+        const colorPool: Rgb[] = [];
 
-        for (const url of spriteCandidates) {
-          try {
-            spriteColor = await getAverageColor(url);
-            break;
-          } catch {
-            // try next fallback URL
-          }
-        }
+        await Promise.all(
+          spriteCandidates.map(async (url) => {
+            try {
+              const color = await getAverageColor(corsSafeImageUrl(url));
+              colorPool.push(color);
+            } catch {
+              // ignore missing sprite/color candidates
+            }
+          })
+        );
 
-        matches[r.key] = spriteColor ? pickBestBall(spriteColor, pokeballs) : null;
+        const pooledColor = averageRgb(colorPool);
+        matches[r.key] = pooledColor ? pickBestBall(pooledColor, pokeballs) : null;
       }
 
       if (!cancelled) setMatchedPokeballs(matches);
@@ -691,6 +694,12 @@ export default function App() {
 
                     {r.revealed && r.isShiny && <div className="cornerTag shiny">Shiny ✨</div>}
                     {r.revealed && isFusion && <div className="cornerTag fusionTag">Fusion 💜</div>}
+                    {r.revealed && opts.pokeballPicker && matchedBall && (
+                      <div className="cornerTag cornerTagRight ballDebug">
+                        <img className="ballDebugIcon" src={matchedBall.url} alt={`${matchedBall.name} match`} />
+                        <span>{matchedBall.name.replace(/\.(png|gif|jpg|jpeg|webp)$/i, '')}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="meta">
