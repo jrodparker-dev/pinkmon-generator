@@ -542,6 +542,24 @@ h1{margin:0; font-size:22px; letter-spacing:0.2px;}
 .cornerTag.fusionTag{
   background: linear-gradient(135deg, rgba(155,92,255,0.22), rgba(255,102,204,0.18));
 }
+.cornerTagRight{
+  left:auto;
+  right:10px;
+}
+.ballDebug{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  max-width:150px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.ballDebugIcon{
+  width:16px;
+  height:16px;
+  image-rendering: pixelated;
+}
 
 .mysteryCover{
   width:100%; height:100%;
