@@ -67,6 +67,8 @@ function normalizeEntry(id: string, entry: any): Pokemon | null {
     baseStats: entry.baseStats,
     abilities,
     tags: entry.tags,
+    prevo: entry.prevo,
+    evos: entry.evos,
   };
 }
 

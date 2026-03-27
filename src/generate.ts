@@ -1,4 +1,4 @@
-import type { BaseStats, BuffKind, Generated, Options, Pokemon, StatKey } from './types';
+import type { BaseStats, BuffKind, EvolutionStage, Generated, Options, Pokemon, StatKey } from './types';
 import {
   attackerMatches,
   genFromNum,
@@ -131,6 +131,14 @@ function isGmaxId(id: string): boolean {
   return id.includes('gmax') || id.includes('gigantamax');
 }
 
+function evolutionStageFor(p: Pokemon): EvolutionStage {
+  const hasPrevo = Boolean(p.prevo);
+  const hasEvos = Boolean(p.evos?.length);
+  if (!hasPrevo && hasEvos) return 'unevolved';
+  if (hasPrevo && hasEvos) return 'evolved-once';
+  return 'fully-evolved';
+}
+
 function spriteIdVariants(id: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -245,6 +253,11 @@ export function generate(pokemon: Pokemon[], options: Options): Generated[] {
 
   if (options.attacker !== 'any') {
     pool = pool.filter((p) => attackerMatches(p, options.attacker));
+  }
+
+  if (options.evolutionStages.length) {
+    const selected = new Set(options.evolutionStages);
+    pool = pool.filter((p) => selected.has(evolutionStageFor(p)));
   }
 
   if (Object.keys(options.statFilters).length || typeof options.bst === 'number') {
