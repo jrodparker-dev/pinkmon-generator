@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDex } from './useDex';
-import type { BuffKind, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
+import type { BuffKind, EvolutionStage, LegendCategory, LegendMode, Options, ShinyOdds, StatKey, Generated } from './types';
 import { generate, spriteColorCandidates, spriteFallbacks } from './generate';
 import { uniq } from './utils';
 import { corsSafeImageUrl, getColorProfile, mergeColorProfiles, pickBestBallForProfile, type ImageColorProfile, type PokeballAsset } from './pokeballMatcher';
@@ -33,6 +33,7 @@ const DEFAULTS: Options = {
   bst: undefined,
 
   randomTyping: false,
+  evolutionStages: [],
 
   abilityMode: 'species',
   includeBuff: false,
@@ -59,6 +60,11 @@ const BUFF_KIND_OPTIONS: { key: BuffKind; label: string }[] = [
 
 const PLUS_ONE_VALUES = [10, 15, 20, 25, 30, 35, 40];
 const PLUS_TWO_VALUES = [10, 15, 20];
+const EVOLUTION_STAGE_OPTIONS: { key: EvolutionStage; label: string }[] = [
+  { key: 'fully-evolved', label: 'Fully Evolved' },
+  { key: 'unevolved', label: 'Unevolved' },
+  { key: 'evolved-once', label: 'Evolved Once' },
+];
 
 const PASTEL_BACKGROUNDS: string[] = [
   `radial-gradient(circle at 15% 20%, rgba(255,182,193,0.22), transparent 55%), radial-gradient(circle at 85% 30%, rgba(186, 85, 211,0.20), transparent 55%), rgba(255,255,255,0.04)`,
@@ -300,6 +306,7 @@ export default function App() {
 
   const selectedTypeChips = useMemo(() => opts.typeFilter.slice().sort((a, b) => a.localeCompare(b)), [opts.typeFilter]);
   const selectedBuffKinds = useMemo(() => new Set(opts.buffKinds), [opts.buffKinds]);
+  const selectedEvolutionStages = useMemo(() => new Set(opts.evolutionStages), [opts.evolutionStages]);
 
   function toggleBuffKind(kind: BuffKind) {
     setOpts((o) => {
@@ -325,6 +332,15 @@ export default function App() {
       if (set.has(amount)) set.delete(amount);
       else set.add(amount);
       return { ...o, plusTwoAmounts: Array.from(set).sort((a, b) => a - b) };
+    });
+  }
+
+  function toggleEvolutionStage(stage: EvolutionStage) {
+    setOpts((o) => {
+      const set = new Set(o.evolutionStages);
+      if (set.has(stage)) set.delete(stage);
+      else set.add(stage);
+      return { ...o, evolutionStages: Array.from(set) as EvolutionStage[] };
     });
   }
 
@@ -527,7 +543,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="row">
+          <div className="abilityEvolutionRow">
             <label className="field">
               <span className="label">Ability</span>
               <select className="select" value={opts.abilityMode} onChange={(e) => setOpts(o => ({ ...o, abilityMode: e.target.value as any }))}>
@@ -536,6 +552,26 @@ export default function App() {
                 <option value="random">Random ability</option>
               </select>
             </label>
+            <DropdownMulti
+              title="Evolution"
+              subtitle=""
+              selectedCount={opts.evolutionStages.length}
+            >
+              <div className="ddTools">
+                <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, evolutionStages: EVOLUTION_STAGE_OPTIONS.map((stage) => stage.key) }))}>All</button>
+                <button type="button" className="tinyBtn" onClick={() => setOpts(o => ({ ...o, evolutionStages: [] }))}>None</button>
+              </div>
+              <div className="ddList">
+                {EVOLUTION_STAGE_OPTIONS.map((stage) => (
+                  <label key={stage.key} className="ddItem">
+                    <input type="checkbox" checked={selectedEvolutionStages.has(stage.key)} onChange={() => toggleEvolutionStage(stage.key)} />
+                    <span>{stage.label}</span>
+                  </label>
+                ))}
+              </div>
+            </DropdownMulti>
+          </div>
+          <div className="row extraTogglesRow">
             <label className="check">
               <input type="checkbox" checked={opts.includeBuff} onChange={(e) => setOpts(o => ({ ...o, includeBuff: e.target.checked }))} />
               <span>Include buff</span>

@@ -13,6 +13,8 @@ export type PSDexEntry = {
   otherFormes?: string[];
   cosmeticFormes?: string[];
   tags?: string[];
+  prevo?: string;
+  evos?: string[];
   tier?: string;
   gen?: number;
 };
@@ -29,9 +31,12 @@ export type Pokemon = {
   baseStats?: BaseStats;
   abilities?: string[]; // ability names
   tags?: string[];
+  prevo?: string;
+  evos?: string[];
 };
 
 export type AttackerPref = 'any' | 'physical' | 'special';
+export type EvolutionStage = 'fully-evolved' | 'evolved-once' | 'unevolved';
 
 export type ShinyOdds = 4096 | 2048 | 512 | 128;
 
@@ -71,6 +76,7 @@ export type Options = {
   bst?: number;
 
   randomTyping: boolean;
+  evolutionStages: EvolutionStage[];
 
   // Extras
   abilityMode: AbilityMode;
